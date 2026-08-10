@@ -1,10 +1,10 @@
 import {useEffect, useState} from "react";
 import {
-  CANVAS_PRESETS,
   FRAME_RATE_PRESETS,
   type FrameRate,
 } from "../../../packages/project-model/src";
 import {EXPORT_PRESETS, type ExportPresetId} from "../../shared/export-presets";
+import {DimensionInput} from "./DimensionInput";
 
 const frameRateKey = (fps: FrameRate): string => `${fps.numerator}/${fps.denominator}`;
 
@@ -51,20 +51,15 @@ export const OutputQuickSettings: React.FC<{
   fps: FrameRate;
   durationSeconds: number;
   exportPresetId: ExportPresetId;
-  onCanvasPresetChange: (presetId: string) => void;
+  onDimensionCommit: (width: number, height: number) => void;
   onFrameRateChange: (value: string) => void;
   onDurationChange: (seconds: number) => void;
   onExportPresetChange: (presetId: ExportPresetId) => void;
-}> = ({width, height, fps, durationSeconds, exportPresetId, onCanvasPresetChange, onFrameRateChange, onDurationChange, onExportPresetChange}) => {
-  const canvasPreset = CANVAS_PRESETS.find((preset) => preset.width === width && preset.height === height);
-  const canvasValue = canvasPreset?.id ?? "custom";
+}> = ({width, height, fps, durationSeconds, exportPresetId, onDimensionCommit, onFrameRateChange, onDurationChange, onExportPresetChange}) => {
   return <div className="output-quick-settings" aria-label="快捷输出设置">
-    <label className="quick-output-control quick-resolution" title="点击修改分辨率">
+    <label className="quick-output-control quick-resolution" title="点击修改分辨率，失焦或回车生效；⇄ 切换横竖屏">
       <span className="sr-only">分辨率</span>
-      <select aria-label="分辨率" value={canvasValue} onChange={(event) => onCanvasPresetChange(event.target.value)}>
-        {!canvasPreset && <option value="custom">{width} × {height}</option>}
-        {CANVAS_PRESETS.map((preset) => <option key={preset.id} value={preset.id}>{preset.width} × {preset.height} · {preset.label}</option>)}
-      </select>
+      <DimensionInput compact width={width} height={height} onCommit={onDimensionCommit} />
     </label>
     <label className="quick-output-control quick-fps" title="点击修改帧率">
       <span className="sr-only">帧率</span>

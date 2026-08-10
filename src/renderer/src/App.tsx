@@ -51,6 +51,7 @@ import {ComposerCanvasOverlay} from "./ComposerCanvasOverlay";
 import {ComposerInspector} from "./ComposerInspector";
 import {ComposerTimeline} from "./ComposerTimeline";
 import {OutputQuickSettings} from "./OutputQuickSettings";
+import {DimensionInput} from "./DimensionInput";
 import motionerIcon from "./assets/motioner-icon.png";
 
 type SaveState = "idle" | "dirty" | "saving" | "saved" | "recovery" | "error";
@@ -81,9 +82,6 @@ const getStageLabel = (
 
 const getProjectFileName = (path: string | null): string =>
   path ? path.split(/[\\/]/).at(-1) ?? path : "尚未保存";
-
-const normalizeEvenDimension = (value: number, minimum: number): number =>
-  Math.min(8_192, Math.max(minimum, Math.round((Number.isFinite(value) ? value : minimum) / 2) * 2));
 
 const frameRateKey = (fps: FrameRate): string => `${fps.numerator}/${fps.denominator}`;
 
@@ -628,6 +626,20 @@ export const App: React.FC = () => {
 
   useEffect(() => {
     if (project.editorMode !== "composer") return;
+    const handleDeleteKey = (event: KeyboardEvent): void => {
+      if (event.key !== "Delete" && event.key !== "Backspace") return;
+      const target = event.target as HTMLElement | null;
+      if (target?.closest("input, textarea, select, [contenteditable='true']")) return;
+      if (!selectedNodeId) return;
+      event.preventDefault();
+      deleteSelectedNodes(false);
+    };
+    window.addEventListener("keydown", handleDeleteKey);
+    return () => window.removeEventListener("keydown", handleDeleteKey);
+  }, [project.editorMode, selectedNodeId, deleteSelectedNodes]);
+
+  useEffect(() => {
+    if (project.editorMode !== "composer") return;
     // 点击与“选中节点操作”无关的区域（画布/时间线空白、工具栏、模板库、状态栏等）
     // 时清除选中，避免选中状态残留造成混乱。节点框、时间线行、组件库与检查器视为
     // 操作选中节点的上下文，保留选中。
@@ -901,10 +913,7 @@ export const App: React.FC = () => {
           fps={project.canvas.fps}
           durationSeconds={durationSeconds}
           exportPresetId={selectedExportPreset.id}
-          onCanvasPresetChange={(presetId) => {
-            const preset = CANVAS_PRESETS.find((candidate) => candidate.id === presetId);
-            if (preset) updateCanvas({width: preset.width, height: preset.height});
-          }}
+          onDimensionCommit={(width, height) => updateCanvas({width, height})}
           onFrameRateChange={changeFrameRate}
           onDurationChange={(seconds) => updateCanvas({durationInFrames: secondsToFrames(seconds, project.canvas.fps)})}
           onExportPresetChange={(presetId) => markChanged({...project, exportPresetId: presetId})}
@@ -937,6 +946,7 @@ export const App: React.FC = () => {
               <span className="preview-status"><span className="status-dot" />同源预览</span>
             </div>
           </div>
+          {project.editorMode === "composer" && composerScene.nodes.length === 0 && <div className="canvas-empty-hint"><strong>画布没有图层</strong><span>从左侧组件库添加文字、图形、数据或素材。</span></div>}
           <div className={`stage-wrap ${project.editorMode === "composer" ? "composer-stage-wrap" : ""}`}>
             <div className={`player-frame preview-background-${previewBackground}`} style={{
               aspectRatio: `${project.canvas.width} / ${project.canvas.height}`,
@@ -989,10 +999,7 @@ export const App: React.FC = () => {
               const preset = CANVAS_PRESETS.find((candidate) => candidate.id === event.target.value);
               if (preset) updateCanvas({width: preset.width, height: preset.height});
             }}><option value="custom">自定义</option>{CANVAS_PRESETS.map((preset) => <option key={preset.id} value={preset.id}>{preset.label}</option>)}</select></label>
-            <div className="field-row">
-              <label className="field field-grow"><span>宽度</span><input type="number" value={project.canvas.width} min={320} max={8192} step={2} onChange={(event) => updateCanvas({width: normalizeEvenDimension(event.target.valueAsNumber, 320)})} /></label>
-              <label className="field field-grow"><span>高度</span><input type="number" value={project.canvas.height} min={240} max={8192} step={2} onChange={(event) => updateCanvas({height: normalizeEvenDimension(event.target.valueAsNumber, 240)})} /></label>
-            </div>
+            <DimensionInput width={project.canvas.width} height={project.canvas.height} onCommit={(w, h) => updateCanvas({width: w, height: h})} />
             <label className="field"><span>帧率</span><select value={frameRateKey(project.canvas.fps)} onChange={(event) => changeFrameRate(event.target.value)}>{FRAME_RATE_PRESETS.map((preset) => <option key={frameRateKey(preset.value)} value={frameRateKey(preset.value)}>{preset.label} fps</option>)}</select></label>
             <DurationInput seconds={durationSeconds} frames={project.canvas.durationInFrames} onCommit={(seconds) => updateCanvas({durationInFrames: secondsToFrames(seconds, project.canvas.fps)})} />
             <label className="field"><span>导出格式</span><select value={project.exportPresetId} onChange={(event) => markChanged({...project, exportPresetId: getExportPreset(event.target.value).id})}>{EXPORT_PRESETS.map((preset) => <option key={preset.id} value={preset.id}>{preset.label}</option>)}</select><small className="field-help">{selectedExportPreset.description}</small></label>

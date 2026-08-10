@@ -237,7 +237,7 @@ export const ComposerTimeline: React.FC<{
         <button type="button" disabled={!selectedNodeId} onClick={() => onMoveLayer("down")}>下移</button>
         <button type="button" disabled={!selectedNodeId} onClick={() => onMoveLayer("back")}>置底</button>
         {onDeleteRipple && <button type="button" disabled={!selectedNodeId} onClick={onDeleteRipple} title="删除并左移其后图层">波纹删除</button>}
-        <button type="button" className="timeline-delete" disabled={!selectedNodeId} onClick={onDelete}>删除</button>
+        <button type="button" className="timeline-delete" disabled={!selectedNodeId} onClick={onDelete} title={selectedNodeId ? "删除选中图层（Delete）" : "先选择图层再删除"}>删除</button>
       </div>
       <div className="timeline-readout"><span>{formatTimecode(currentFrame, fps)}</span><span>/</span><span>{formatTimecode(durationInFrames - 1, fps)}</span></div>
     </header>

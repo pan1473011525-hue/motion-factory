@@ -196,6 +196,66 @@ input:disabled {
 .quick-fps select { width: 76px; }
 .quick-format select { width: 106px; }
 
+/* 分辨率输入(顶栏紧凑版) */
+.dimension-input {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.dimension-input .field input {
+  height: 32px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.dimension-sep {
+  padding-bottom: 10px;
+  color: var(--quiet);
+  font-size: 12px;
+}
+
+.dimension-swap {
+  height: 32px;
+  padding: 0 9px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  color: var(--muted);
+  background: var(--surface-2);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.dimension-swap:hover {
+  color: var(--ink);
+  background: var(--surface-3);
+}
+
+.dimension-input-compact {
+  gap: 2px;
+}
+
+.dimension-input-compact input {
+  width: 52px;
+  padding: 0 4px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  cursor: text;
+}
+
+.dimension-input-compact .dimension-sep {
+  padding-bottom: 0;
+}
+
+.dimension-input-compact .dimension-swap {
+  width: 26px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
 .quick-duration {
   padding-right: 8px;
 }
@@ -816,6 +876,7 @@ input:disabled {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
   background: var(--bg);
+  position: relative;
 }
 
 .canvas-panel.composer-mode {
@@ -843,6 +904,34 @@ input:disabled {
   gap: 7px;
   color: var(--muted);
   font-size: 10px;
+}
+
+.canvas-empty-hint {
+  position: absolute;
+  z-index: 41000;
+  top: 50%;
+  left: 50%;
+  display: grid;
+  place-items: center;
+  gap: 8px;
+  padding: 26px 34px;
+  border: 1px dashed var(--line-strong);
+  border-radius: 12px;
+  color: var(--muted);
+  background: color-mix(in oklab, var(--bg) 88%, transparent);
+  text-align: center;
+  translate: -50% -50%;
+  pointer-events: none;
+}
+
+.canvas-empty-hint strong {
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 650;
+}
+
+.canvas-empty-hint span {
+  font-size: 11px;
 }
 
 .status-dot {
