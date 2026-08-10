@@ -52,6 +52,11 @@
 - **根因**:「点击清除选中」的 document 捕获监听把时间线操作按钮(删除/复制/置顶/波纹删除)也判为"无关区域",点击删除按钮时**先清空 `selectedNodeId`**,与按钮 onClick 产生竞态,导致删除失效(所有素材都删不掉)。
 - **修复**:`.composer-timeline .timeline-toolbar` 纳入保留选中区域;键盘删除改用 ref 持有处理器。
 
+### 7. 界面按钮 lucide 图标化(提交 `fd86c51`)
+- 引入 MIT 开源 `lucide-react`,将全部可图标化的文字/符号按钮替换为统一图标(28 个纯图标 + 8 个符号规范化),保留 `title`/`aria-label` 兜底可访问性。
+- 高信息量按钮(导出/模式切换/入场退场循环/波纹删除/工作流)保留文字。新增 `.icon-btn` 统一样式。
+- `pnpm check` 21 文件/57 测试全绿,打包 + verify + e2e + hdiutil + 挂载内容验证全部通过。
+
 ---
 
 ## 三、当前项目状态
@@ -60,7 +65,7 @@
 - **测试**:`pnpm check` 全绿 —— 21 个测试文件 / 57 项测试(lint + tsc + vitest)。
 - **构建产物**:`release/Motioner-1.3.1-arm64.dmg`(259.8 MB)+ `Motioner-integrity.json` + `SHA256SUMS.txt`(每次打包后需重新计算 1.3.1 校验和)。
 - **Git**:6 个提交,工作区干净。提交历史见上(最近:`defc794`)。
-- **新增依赖**:`@remotion/media`、`@remotion/media-utils`、`@remotion/animation-utils`(均 4.0.507,已入 `package.json` 与 lock)。
+- **新增依赖**:`@remotion/media`、`@remotion/media-utils`、`@remotion/animation-utils`(均 4.0.507)、`lucide-react`(1.30.0),均已入 `package.json` 与 lock。
 
 ---
 
@@ -120,3 +125,4 @@ pnpm package:dmg      # 完整打包:build + electron-builder + verify + package
 ## 八、变更记录
 
 - 2026-08-10:创建本文档。记录 Reasonix 接手 codex 之后(依赖恢复 → 打包交付 → 交互修复 → 十方向路线图 → 多轮打包与回归修复)的全部工作、当前状态与待办。
+- 2026-08-10:追加记录——界面按钮 lucide 图标化(提交 `fd86c51`),新增 `lucide-react` 依赖;DMG 挂载内容验证纳入交付检查清单。
