@@ -16,6 +16,7 @@
     "@remotion/player": "4.0.507",
     "@remotion/renderer": "4.0.507",
     "@remotion/zod-types": "4.0.507",
+    "lucide-react": "^1.30.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "remotion": "4.0.507",

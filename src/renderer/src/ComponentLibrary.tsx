@@ -9,6 +9,7 @@ import {
   motionPresets,
   type ComposerComponentCategory,
 } from "../../composer/registry";
+import {Check, Plus} from "lucide-react";
 
 type LibraryTab = "components" | "motions";
 type CategoryFilter = "all" | ComposerComponentCategory;
@@ -55,7 +56,7 @@ export const ComponentLibrary: React.FC<{
     <label className="search-field"><span className="sr-only">搜索组件或动效</span><input type="search" placeholder={tab === "components" ? "搜索组件" : "搜索动效"} value={query} onChange={(event) => setQuery(event.target.value)} /></label>
     {tab === "components" ? <>
       <nav className="category-row composer-categories" aria-label="组件分类">{(Object.keys(categoryLabels) as CategoryFilter[]).map((key) => <button className={category === key ? "category-active" : ""} type="button" key={key} onClick={() => setCategory(key)}>{categoryLabels[key]}</button>)}</nav>
-      <div className="component-grid">{filteredComponents.map((component) => <button type="button" className="component-card" key={component.id} onClick={() => onAdd(component.id)}><span className="component-glyph" aria-hidden="true">{component.preview}</span><span><strong>{component.name}</strong><small>{component.description}</small></span><b aria-hidden="true">+</b></button>)}{filteredComponents.length === 0 && <p className="empty-templates">没有匹配的组件</p>}</div>
+      <div className="component-grid">{filteredComponents.map((component) => <button type="button" className="component-card" key={component.id} onClick={() => onAdd(component.id)}><span className="component-glyph" aria-hidden="true">{component.preview}</span><span><strong>{component.name}</strong><small>{component.description}</small></span><b aria-hidden="true"><Plus size={13} /></b></button>)}{filteredComponents.length === 0 && <p className="empty-templates">没有匹配的组件</p>}</div>
       <div className="prototype-note"><strong>{composerComponents.length} 个基础组件</strong><span>点击组件即可在画布中央创建图层。</span></div>
     </> : <>
       <div className="motion-library-list">{filteredMotions.map((preset) => {
@@ -82,9 +83,9 @@ export const ComponentLibrary: React.FC<{
             {preset.id !== "none" && <b className="motion-drag-hint" aria-hidden="true">拖</b>}
           </button>
           <div className="motion-apply-actions">
-            {preset.phases.includes("enter") && <button type="button" className={isMotionApplied(selectedNode, preset.id, "enter") ? "applied" : ""} aria-pressed={isMotionApplied(selectedNode, preset.id, "enter")} onClick={() => apply("enter")} disabled={!selectedNode}>{isMotionApplied(selectedNode, preset.id, "enter") ? "✓ 入场" : "入场"}</button>}
-            {preset.phases.includes("exit") && <button type="button" className={isMotionApplied(selectedNode, preset.id, "exit") ? "applied" : ""} aria-pressed={isMotionApplied(selectedNode, preset.id, "exit")} onClick={() => apply("exit")} disabled={!selectedNode}>{isMotionApplied(selectedNode, preset.id, "exit") ? "✓ 退场" : "退场"}</button>}
-            {preset.phases.includes("loop") && <button type="button" className={isMotionApplied(selectedNode, preset.id, "loop") ? "applied" : ""} aria-pressed={isMotionApplied(selectedNode, preset.id, "loop")} onClick={() => apply("loop")} disabled={!selectedNode}>{isMotionApplied(selectedNode, preset.id, "loop") ? "✓ 循环" : "循环"}</button>}
+            {preset.phases.includes("enter") && <button type="button" className={isMotionApplied(selectedNode, preset.id, "enter") ? "applied" : ""} aria-pressed={isMotionApplied(selectedNode, preset.id, "enter")} onClick={() => apply("enter")} disabled={!selectedNode}>{isMotionApplied(selectedNode, preset.id, "enter") ? <><Check size={9} />入场</> : "入场"}</button>}
+            {preset.phases.includes("exit") && <button type="button" className={isMotionApplied(selectedNode, preset.id, "exit") ? "applied" : ""} aria-pressed={isMotionApplied(selectedNode, preset.id, "exit")} onClick={() => apply("exit")} disabled={!selectedNode}>{isMotionApplied(selectedNode, preset.id, "exit") ? <><Check size={9} />退场</> : "退场"}</button>}
+            {preset.phases.includes("loop") && <button type="button" className={isMotionApplied(selectedNode, preset.id, "loop") ? "applied" : ""} aria-pressed={isMotionApplied(selectedNode, preset.id, "loop")} onClick={() => apply("loop")} disabled={!selectedNode}>{isMotionApplied(selectedNode, preset.id, "loop") ? <><Check size={9} />循环</> : "循环"}</button>}
           </div>
         </article>;
       })}{filteredMotions.length === 0 && <p className="empty-templates">没有匹配的动效</p>}</div>

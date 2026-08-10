@@ -1,4 +1,20 @@
 import {useMemo, useRef, useState} from "react";
+import {
+  ArrowDown,
+  ArrowDownToLine,
+  ArrowUp,
+  ArrowUpToLine,
+  Copy,
+  Eye,
+  EyeOff,
+  Flag,
+  Lock,
+  LockOpen,
+  Pause,
+  Play,
+  Scissors,
+  Trash2,
+} from "lucide-react";
 import type {
   ComposerComposition,
   ComposerMotionPresetId,
@@ -225,19 +241,19 @@ export const ComposerTimeline: React.FC<{
   >
     <header className="timeline-toolbar">
       <div className="timeline-transport">
-        <button type="button" className={`timeline-play-toggle ${isPlaying ? "active" : ""}`} onClick={onTogglePlayback} title="播放 / 暂停（空格）" aria-label={isPlaying ? "暂停，快捷键空格" : "播放，快捷键空格"}><span aria-hidden="true">{isPlaying ? "Ⅱ" : "▶"}</span>{isPlaying ? "暂停" : "播放"}</button>
+        <button type="button" className={`timeline-play-toggle ${isPlaying ? "active" : ""}`} onClick={onTogglePlayback} title="播放 / 暂停（空格）" aria-label={isPlaying ? "暂停，快捷键空格" : "播放，快捷键空格"}>{isPlaying ? <Pause /> : <Play />}{isPlaying ? "暂停" : "播放"}</button>
         <span>{composition.nodes.length} 层</span>
-        {onAddTimeSlot && <button type="button" onClick={onAddTimeSlot} title="在当前播放头添加时间标记">＋标记</button>}
-        {onAddSegment && <button type="button" onClick={onAddSegment} title="在当前播放头添加分段点">＋分段</button>}
+        {onAddTimeSlot && <button type="button" className="icon-btn" onClick={onAddTimeSlot} title="在当前播放头添加时间标记"><Flag />标记</button>}
+        {onAddSegment && <button type="button" className="icon-btn" onClick={onAddSegment} title="在当前播放头添加分段点"><Scissors />分段</button>}
       </div>
       <div className="timeline-layer-actions">
-        <button type="button" disabled={!selectedNodeId} onClick={onDuplicate}>复制</button>
-        <button type="button" disabled={!selectedNodeId} onClick={() => onMoveLayer("front")}>置顶</button>
-        <button type="button" disabled={!selectedNodeId} onClick={() => onMoveLayer("up")}>上移</button>
-        <button type="button" disabled={!selectedNodeId} onClick={() => onMoveLayer("down")}>下移</button>
-        <button type="button" disabled={!selectedNodeId} onClick={() => onMoveLayer("back")}>置底</button>
+        <button type="button" className="icon-btn" disabled={!selectedNodeId} onClick={onDuplicate} title="复制选中图层" aria-label="复制选中图层"><Copy /></button>
+        <button type="button" className="icon-btn" disabled={!selectedNodeId} onClick={() => onMoveLayer("front")} title="置顶" aria-label="置顶"><ArrowUpToLine /></button>
+        <button type="button" className="icon-btn" disabled={!selectedNodeId} onClick={() => onMoveLayer("up")} title="上移" aria-label="上移"><ArrowUp /></button>
+        <button type="button" className="icon-btn" disabled={!selectedNodeId} onClick={() => onMoveLayer("down")} title="下移" aria-label="下移"><ArrowDown /></button>
+        <button type="button" className="icon-btn" disabled={!selectedNodeId} onClick={() => onMoveLayer("back")} title="置底" aria-label="置底"><ArrowDownToLine /></button>
         {onDeleteRipple && <button type="button" disabled={!selectedNodeId} onClick={onDeleteRipple} title="删除并左移其后图层">波纹删除</button>}
-        <button type="button" className="timeline-delete" disabled={!selectedNodeId} onClick={onDelete} title={selectedNodeId ? "删除选中图层（Delete）" : "先选择图层再删除"}>删除</button>
+        <button type="button" className="icon-btn timeline-delete" disabled={!selectedNodeId} onClick={onDelete} title={selectedNodeId ? "删除选中图层（Delete）" : "先选择图层再删除"} aria-label="删除选中图层"><Trash2 /></button>
       </div>
       <div className="timeline-readout"><span>{formatTimecode(currentFrame, fps)}</span><span>/</span><span>{formatTimecode(durationInFrames - 1, fps)}</span></div>
     </header>
@@ -281,8 +297,8 @@ export const ComposerTimeline: React.FC<{
         const motionSummary = [node.motion.enter !== "none" ? `入场：${motionName(node.motion.enter)}` : null, node.motion.loop !== "none" ? `循环：${motionName(node.motion.loop)}` : null, node.motion.exit !== "none" ? `退场：${motionName(node.motion.exit)}` : null].filter(Boolean).join(" · ");
         return <div key={node.id} className={`layer-timeline-row ${node.id === selectedNodeId ? "selected" : ""} ${multiSelectedIds.includes(node.id) ? "multi-selected" : ""}`} onClick={(event) => onSelect(node.id, event.shiftKey)}>
           <div className="layer-controls">
-            <button type="button" title={node.hidden ? "显示图层" : "隐藏图层"} onClick={(event) => {event.stopPropagation(); onCommit(replaceNode(composition, {...node, hidden: !node.hidden}));}}>{node.hidden ? "隐" : "显"}</button>
-            <button type="button" title={node.locked ? "解锁图层" : "锁定图层"} onClick={(event) => {event.stopPropagation(); onCommit(replaceNode(composition, {...node, locked: !node.locked}));}}>{node.locked ? "锁" : "开"}</button>
+            <button type="button" className="icon-btn" title={node.hidden ? "显示图层" : "隐藏图层"} aria-label={node.hidden ? "显示图层" : "隐藏图层"} onClick={(event) => {event.stopPropagation(); onCommit(replaceNode(composition, {...node, hidden: !node.hidden}));}}>{node.hidden ? <EyeOff /> : <Eye />}</button>
+            <button type="button" className="icon-btn" title={node.locked ? "解锁图层" : "锁定图层"} aria-label={node.locked ? "解锁图层" : "锁定图层"} onClick={(event) => {event.stopPropagation(); onCommit(replaceNode(composition, {...node, locked: !node.locked}));}}>{node.locked ? <Lock /> : <LockOpen />}</button>
             <span title={motionSummary || node.name}>{node.name}</span>
           </div>
           <div className="layer-timing-track" onPointerDown={(event) => {onSelect(node.id, false); beginScrub(event);}}>

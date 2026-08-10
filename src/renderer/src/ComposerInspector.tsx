@@ -4,6 +4,7 @@ import type {
   ProjectAsset,
 } from "../../../packages/project-model/src";
 import type {InspectorField, InspectorSection} from "../../../packages/template-sdk/src";
+import {Eye, EyeOff, Lock, LockOpen} from "lucide-react";
 import {getComposerComponent, motionPresets} from "../../composer/registry";
 import {FieldControl} from "./Inspector";
 
@@ -44,7 +45,7 @@ export const ComposerInspector: React.FC<{
   return <>
     <section className="inspector-section node-identity-editor">
       <label className="field"><span>图层名称</span><input value={node.name} maxLength={96} onChange={(event) => onChange({...node, name: event.target.value || definition.name})} /></label>
-      <div className="node-state-actions"><button type="button" className={node.hidden ? "active" : ""} onClick={() => onChange({...node, hidden: !node.hidden})}>{node.hidden ? "已隐藏" : "可见"}</button><button type="button" className={node.locked ? "active" : ""} onClick={() => onChange({...node, locked: !node.locked})}>{node.locked ? "已锁定" : "可编辑"}</button></div>
+      <div className="node-state-actions"><button type="button" className={`icon-btn ${node.hidden ? "active" : ""}`} onClick={() => onChange({...node, hidden: !node.hidden})} title={node.hidden ? "显示图层" : "隐藏图层"}>{node.hidden ? <EyeOff /> : <Eye />}{node.hidden ? "已隐藏" : "可见"}</button><button type="button" className={`icon-btn ${node.locked ? "active" : ""}`} onClick={() => onChange({...node, locked: !node.locked})} title={node.locked ? "解锁图层" : "锁定图层"}>{node.locked ? <Lock /> : <LockOpen />}{node.locked ? "已锁定" : "可编辑"}</button></div>
     </section>
     <section className="inspector-section transform-editor">
       <h3>变换</h3>

@@ -1,4 +1,5 @@
 import {useEffect, useState} from "react";
+import {ArrowLeftRight} from "lucide-react";
 
 const evenDimension = (value: number, minimum: number): number =>
   Math.min(8_192, Math.max(minimum, Math.round((Number.isFinite(value) ? value : minimum) / 2) * 2));
@@ -81,12 +82,12 @@ export const DimensionInput: React.FC<{
   return compact
     ? <div className="dimension-input dimension-input-compact">
       {widthField}<span className="dimension-sep">×</span>{heightField}
-      <button type="button" className="dimension-swap" title="切换横竖屏（对调宽高）" aria-label="切换横竖屏" onClick={() => onCommit(height, width)}>⇄</button>
+      <button type="button" className="dimension-swap icon-btn" title="切换横竖屏（对调宽高）" aria-label="切换横竖屏" onClick={() => onCommit(height, width)}><ArrowLeftRight /></button>
     </div>
     : <div className="dimension-input">
       <label className="field field-grow"><span>宽度</span>{widthField}</label>
       <span className="dimension-sep" aria-hidden="true">×</span>
       <label className="field field-grow"><span>高度</span>{heightField}</label>
-      <button type="button" className="dimension-swap" title="切换横竖屏（对调宽高）" aria-label="切换横竖屏" onClick={() => onCommit(height, width)}>⇄</button>
+      <button type="button" className="dimension-swap icon-btn" title="切换横竖屏（对调宽高）" aria-label="切换横竖屏" onClick={() => onCommit(height, width)}><ArrowLeftRight /></button>
     </div>;
 };

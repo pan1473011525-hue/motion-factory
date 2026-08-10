@@ -6,6 +6,7 @@ import type {
 import type {ProjectAsset} from "../../../packages/project-model/src";
 import type {AnyTemplateManifest} from "../../templates/catalog";
 import {useRef, useState} from "react";
+import {ArrowDown, ArrowUp, X} from "lucide-react";
 import {parseCsv} from "./csv";
 
 const sectionLabels: Record<InspectorSection, string> = {
@@ -115,9 +116,9 @@ const DataArrayEditor: React.FC<{
             />
           ))}
           <span className="row-actions">
-            <button type="button" aria-label="上移" disabled={index === 0} onClick={() => move(index, -1)}>↑</button>
-            <button type="button" aria-label="下移" disabled={index === rows.length - 1} onClick={() => move(index, 1)}>↓</button>
-            <button type="button" aria-label="删除" disabled={rows.length <= (field.minItems ?? 0)} onClick={() => onChange(rows.filter((_row, rowIndex) => rowIndex !== index))}>×</button>
+            <button type="button" className="icon-btn" aria-label="上移" disabled={index === 0} onClick={() => move(index, -1)}><ArrowUp /></button>
+            <button type="button" className="icon-btn" aria-label="下移" disabled={index === rows.length - 1} onClick={() => move(index, 1)}><ArrowDown /></button>
+            <button type="button" className="icon-btn" aria-label="删除" disabled={rows.length <= (field.minItems ?? 0)} onClick={() => onChange(rows.filter((_row, rowIndex) => rowIndex !== index))}><X /></button>
           </span>
         </div>
       ))}

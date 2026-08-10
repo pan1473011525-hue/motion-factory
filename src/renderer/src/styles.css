@@ -2514,3 +2514,39 @@ input:disabled {
     animation-iteration-count: 1 !important;
   }
 }
+
+/* ===== lucide 图标按钮 ===== */
+button.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 0 6px;
+}
+
+button.icon-btn svg {
+  width: 14px;
+  height: 14px;
+  flex: none;
+}
+
+.canvas-actions button.icon-btn {
+  height: 25px;
+}
+
+.canvas-actions .transport-toggle svg,
+.timeline-transport .timeline-play-toggle svg {
+  width: 13px;
+  height: 13px;
+  color: var(--focus);
+}
+
+.favorite-button svg {
+  width: 13px;
+  height: 13px;
+}
+
+.motion-apply-actions button svg {
+  margin-right: 2px;
+  vertical-align: -1px;
+}
