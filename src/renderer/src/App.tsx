@@ -624,6 +624,10 @@ export const App: React.FC = () => {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [project.editorMode, togglePlayback]);
 
+  const deleteSelectedNodesRef = useRef(deleteSelectedNodes);
+  useEffect(() => {
+    deleteSelectedNodesRef.current = deleteSelectedNodes;
+  });
   useEffect(() => {
     if (project.editorMode !== "composer") return;
     const handleDeleteKey = (event: KeyboardEvent): void => {
@@ -632,21 +636,22 @@ export const App: React.FC = () => {
       if (target?.closest("input, textarea, select, [contenteditable='true']")) return;
       if (!selectedNodeId) return;
       event.preventDefault();
-      deleteSelectedNodes(false);
+      deleteSelectedNodesRef.current(false);
     };
     window.addEventListener("keydown", handleDeleteKey);
     return () => window.removeEventListener("keydown", handleDeleteKey);
-  }, [project.editorMode, selectedNodeId, deleteSelectedNodes]);
+  }, [project.editorMode, selectedNodeId]);
 
   useEffect(() => {
     if (project.editorMode !== "composer") return;
     // 点击与“选中节点操作”无关的区域（画布/时间线空白、工具栏、模板库、状态栏等）
-    // 时清除选中，避免选中状态残留造成混乱。节点框、时间线行、组件库与检查器视为
-    // 操作选中节点的上下文，保留选中。
+    // 时清除选中，避免选中状态残留造成混乱。节点框、时间线行、时间线操作按钮
+    // （删除/复制/置顶等，作用于当前选中）、组件库与检查器视为操作选中节点的
+    // 上下文，保留选中——否则点击删除按钮会先被此处清空选中导致删除失效。
     const handleClick = (event: MouseEvent): void => {
       const target = event.target as HTMLElement | null;
       if (!target) return;
-      if (target.closest(".composer-canvas-overlay, .composer-timeline .layer-timeline-row, .component-library, .inspector-panel")) return;
+      if (target.closest(".composer-canvas-overlay, .composer-timeline .layer-timeline-row, .composer-timeline .timeline-toolbar, .component-library, .inspector-panel")) return;
       setSelectedNodeId(null);
       setMultiSelectedIds([]);
     };
