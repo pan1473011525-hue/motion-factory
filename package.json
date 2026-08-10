@@ -9,7 +9,10 @@
   "private": true,
   "packageManager": "pnpm@11.16.0",
   "dependencies": {
+    "@remotion/animation-utils": "4.0.507",
     "@remotion/cli": "4.0.507",
+    "@remotion/media": "4.0.507",
+    "@remotion/media-utils": "4.0.507",
     "@remotion/player": "4.0.507",
     "@remotion/renderer": "4.0.507",
     "@remotion/zod-types": "4.0.507",

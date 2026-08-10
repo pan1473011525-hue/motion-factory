@@ -3,15 +3,17 @@ import {createMotionProject, motionProjectSchema} from "../../packages/project-m
 import {EXPORT_PRESETS, getExportPreset} from "./export-presets";
 
 describe("export presets", () => {
-  it("exposes four distinct production outputs", () => {
+  it("exposes five distinct production outputs", () => {
     expect(EXPORT_PRESETS.map((preset) => preset.id)).toEqual([
       "prores-4444",
       "prores-4444-xq",
       "png-sequence",
       "h264-review",
+      "lottie-json",
     ]);
     expect(getExportPreset("png-sequence").kind).toBe("image-sequence");
     expect(getExportPreset("h264-review").alpha).toBe(false);
+    expect(getExportPreset("lottie-json").kind).toBe("lottie");
   });
 
   it("rejects unknown presets when opening a project", () => {

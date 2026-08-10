@@ -70,7 +70,10 @@ export const ComposerInspector: React.FC<{
       <MotionSelect label="退场" phase="exit" value={node.motion.exit} onChange={(exit) => updateMotion({exit})} />
       <label className="field"><span>退场帧数</span><input type="number" min={1} max={Math.max(1, node.timing.durationInFrames)} value={node.motion.exitDuration} onChange={(event) => updateMotion({exitDuration: clamp(event.target.valueAsNumber || 1, 1, Math.max(1, node.timing.durationInFrames))})} /></label>
       <MotionSelect label="持续动效" phase="loop" value={node.motion.loop} onChange={(loop) => updateMotion({loop})} />
-      <label className="field"><span>动效强度</span><input type="range" min={0} max={2} step={0.05} value={node.motion.intensity} onChange={(event) => updateMotion({intensity: event.target.valueAsNumber})} /><small className="field-help">{node.motion.intensity.toFixed(2)}×</small></label>
+      <label className="field"><span>整体强度</span><input type="range" min={0} max={2} step={0.05} value={node.motion.intensity} onChange={(event) => updateMotion({intensity: event.target.valueAsNumber})} /><small className="field-help">{node.motion.intensity.toFixed(2)}×</small></label>
+      <label className="field"><span>入场强度</span><input type="range" min={0} max={1} step={0.05} value={node.motion.mix?.enter ?? 1} onChange={(event) => updateMotion({mix: {...(node.motion.mix ?? {enter: 1, exit: 1, loop: 1}), enter: event.target.valueAsNumber}})} /><small className="field-help">{((node.motion.mix?.enter ?? 1) * 100).toFixed(0)}%</small></label>
+      <label className="field"><span>退场强度</span><input type="range" min={0} max={1} step={0.05} value={node.motion.mix?.exit ?? 1} onChange={(event) => updateMotion({mix: {...(node.motion.mix ?? {enter: 1, exit: 1, loop: 1}), exit: event.target.valueAsNumber}})} /><small className="field-help">{((node.motion.mix?.exit ?? 1) * 100).toFixed(0)}%</small></label>
+      <label className="field"><span>持续强度</span><input type="range" min={0} max={1} step={0.05} value={node.motion.mix?.loop ?? 1} onChange={(event) => updateMotion({mix: {...(node.motion.mix ?? {enter: 1, exit: 1, loop: 1}), loop: event.target.valueAsNumber}})} /><small className="field-help">{((node.motion.mix?.loop ?? 1) * 100).toFixed(0)}%</small></label>
     </section>
   </>;
 };

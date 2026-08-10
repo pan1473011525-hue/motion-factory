@@ -1,10 +1,9 @@
 import {createContext, useContext, useEffect, useMemo, useState} from "react";
+import {Video} from "@remotion/media";
 import {
   AbsoluteFill,
   Easing,
-  Freeze,
   Img,
-  OffthreadVideo,
   continueRender,
   delayRender,
   interpolate,
@@ -274,12 +273,17 @@ export const MediaSlot: React.FC<{
   const elapsed = Math.max(0, Math.floor(frame * playbackRate));
   const segment = end === null ? null : Math.max(1, end - start);
   if (segment !== null && playbackMode === "once" && elapsed >= segment) return null;
-  const sourceFrame = segment === null
-    ? start + elapsed
-    : playbackMode === "loop"
-      ? start + elapsed % segment
-      : start + Math.min(segment - 1, elapsed);
-  return <Freeze frame={sourceFrame}><OffthreadVideo src={previewSrc} muted style={commonStyle} /></Freeze>;
+  // @remotion/media 的 <Video>:预览端 Mediabunny 并行解码,渲染端自动回退 OffthreadVideo 抽帧,
+  // 入点/出点/倍速/循环交给组件原生参数,替代手写 Freeze+帧计算。
+  return <Video
+    src={previewSrc}
+    trimBefore={start / fps}
+    trimAfter={end === null ? undefined : end / fps}
+    playbackRate={playbackRate}
+    loop={playbackMode === "loop"}
+    muted
+    style={commonStyle}
+  />;
 };
 
 export const SourceFooter: React.FC<{source: string; style?: React.CSSProperties}> = ({source, style}) => {

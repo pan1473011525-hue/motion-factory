@@ -6,7 +6,7 @@ import {
 } from "@remotion/renderer";
 import {spawn, type ChildProcessWithoutNullStreams} from "node:child_process";
 import {createReadStream, existsSync} from "node:fs";
-import {mkdir, readdir, rename, rm, rmdir, stat, unlink, writeFile} from "node:fs/promises";
+import {mkdir, readFile, readdir, rename, rm, rmdir, stat, unlink, writeFile} from "node:fs/promises";
 import {createServer, type Server} from "node:http";
 import {once} from "node:events";
 import {basename, dirname, extname, join} from "node:path";
@@ -18,6 +18,7 @@ import type {
   RenderWorkerStartMessage,
 } from "../shared/contracts";
 import {getExportPreset, type ExportPresetId} from "../shared/export-presets";
+import {buildLottieExport} from "../shared/lottie-export";
 
 const parentPort = process.parentPort;
 
@@ -28,6 +29,18 @@ if (!parentPort) {
 const activeCancels = new Map<string, () => void>();
 const cancelledJobs = new Set<string>();
 let lastCancellationAt = 0;
+
+// 渲染失败自动重试(浏览器/compositor 崩溃等瞬时故障):每个任务只重试一次。
+const retriedJobs = new Set<string>();
+
+const USER_ERROR_PATTERN = /磁盘空间不足|素材文件已丢失|不是空文件夹|目标文件已存在|校验未通过|参数无效|目标文件夹/u;
+
+const shouldRetryRender = (jobId: string, error: unknown): boolean => {
+  if (retriedJobs.has(jobId) || cancelledJobs.has(jobId)) return false;
+  const message = error instanceof Error ? error.message : String(error);
+  if (USER_ERROR_PATTERN.test(message)) return false;
+  return true;
+};
 
 process.on("unhandledRejection", (reason) => {
   const error = reason instanceof Error ? reason as NodeJS.ErrnoException : null;
@@ -298,6 +311,30 @@ const ensureRec709Metadata = async (
   }
 };
 
+const validateLottieOutput = async (message: RenderWorkerStartMessage): Promise<ExportValidation> => {
+  const raw = await readFile(message.outputLocation, "utf8");
+  const parsed = JSON.parse(raw) as {layers?: unknown[]; w?: number; h?: number; op?: number} | null;
+  if (!parsed || !Array.isArray(parsed.layers)) {
+    throw new Error("Lottie 导出校验失败：JSON 结构无效");
+  }
+  const outputStat = await stat(message.outputLocation);
+  return {
+    ok: true,
+    summary: `Lottie · ${parsed.layers.length} 层 · ${(outputStat.size / 1024).toFixed(1)} KB`,
+    codec: "lottie",
+    profile: null,
+    pixelFormat: null,
+    width: parsed.w ?? 0,
+    height: parsed.h ?? 0,
+    fps: 0,
+    frames: parsed.op ?? 0,
+    fileSizeBytes: outputStat.size,
+    colorSpace: null,
+    colorPrimaries: null,
+    colorTransfer: null,
+  };
+};
+
 const promoteOutput = async (
   temporaryPath: string,
   finalPath: string,
@@ -381,7 +418,22 @@ const runRender = async (message: RenderWorkerStartMessage): Promise<void> => {
       durationInFrames: message.project.canvas.durationInFrames,
     };
 
-    if (preset.kind === "image-sequence") {
+    if (preset.kind === "lottie") {
+      // Lottie 导出无需 Remotion 渲染:直接由 Composer 场景序列化为 Lottie JSON。
+      const {json, warnings} = buildLottieExport(message.project.composition, message.project.canvas, message.project.canvas.durationInFrames);
+      await mkdir(dirname(temporaryOutputLocation), {recursive: true});
+      await writeFile(temporaryOutputLocation, JSON.stringify(json));
+      if (warnings.length > 0) {
+        emit({
+          type: "progress",
+          jobId: message.jobId,
+          progress: 1,
+          renderedFrames: message.project.canvas.durationInFrames,
+          encodedFrames: 0,
+          stage: "validating",
+        });
+      }
+    } else if (preset.kind === "image-sequence") {
       if (!message.overwriteExisting && existsSync(finalOutputLocation) && (await readdir(finalOutputLocation)).length > 0) {
         throw new Error("PNG 序列目标文件夹不是空文件夹，请选择新的输出位置");
       }
@@ -395,6 +447,7 @@ const runRender = async (message: RenderWorkerStartMessage): Promise<void> => {
         imageSequencePattern: "motioner-[frame].[ext]",
         muted: true,
         concurrency: "50%",
+        offthreadVideoCacheSizeInBytes: 512 * 1024 * 1024,
         cancelSignal,
         browserExecutable: message.browserExecutable ?? undefined,
         binariesDirectory: message.binariesDirectory,
@@ -425,6 +478,7 @@ const runRender = async (message: RenderWorkerStartMessage): Promise<void> => {
         overwrite: true,
         muted: true,
         concurrency: "50%",
+        offthreadVideoCacheSizeInBytes: 512 * 1024 * 1024,
         cancelSignal,
         browserExecutable: message.browserExecutable ?? undefined,
         binariesDirectory: message.binariesDirectory,
@@ -457,7 +511,9 @@ const runRender = async (message: RenderWorkerStartMessage): Promise<void> => {
     });
     const validation = preset.kind === "image-sequence"
       ? await validatePngSequence(workingMessage)
-      : await validateVideoOutput(workingMessage, preset.id, (child) => { validationChild = child; });
+      : preset.kind === "lottie"
+        ? await validateLottieOutput(workingMessage)
+        : await validateVideoOutput(workingMessage, preset.id, (child) => { validationChild = child; });
 
     if (preset.kind === "image-sequence" && existsSync(finalOutputLocation) && !message.overwriteExisting) {
       await rmdir(finalOutputLocation);
@@ -480,6 +536,36 @@ const runRender = async (message: RenderWorkerStartMessage): Promise<void> => {
       validation,
     }, null, 2)}\n`, "utf8");
 
+    // 分段元数据:有分段点时输出 sections.json,供下游剪辑/合成管线自动化消费。
+    if (preset.kind === "video" && (message.project.segments ?? []).length > 0) {
+      const fps = message.project.canvas.fps.numerator / message.project.canvas.fps.denominator;
+      const bounds = [0, ...(message.project.segments ?? []).map((segment) => segment.frame).filter((frame) => frame > 0 && frame < message.project.canvas.durationInFrames), message.project.canvas.durationInFrames];
+      const uniqueBounds = [...new Set(bounds)].sort((a, b) => a - b);
+      const segments = uniqueBounds.slice(0, -1).map((from, index) => {
+        const to = uniqueBounds[index + 1];
+        return {
+          label: `段 ${index + 1}`,
+          fromFrame: from,
+          toFrame: to - 1,
+          frameCount: to - from,
+          durationSeconds: Math.round((to - from) / fps * 1000) / 1000,
+        };
+      });
+      await writeFile(`${finalOutputLocation}.sections.json`, `${JSON.stringify({
+        application: "Motioner",
+        exportedAt: new Date().toISOString(),
+        jobId: message.jobId,
+        projectId: message.project.id,
+        canvas: message.project.canvas,
+        codec: validation.codec,
+        width: validation.width,
+        height: validation.height,
+        fps,
+        colorSpace: validation.colorSpace,
+        segments,
+      }, null, 2)}\n`, "utf8");
+    }
+
     emit({
       type: "complete",
       jobId: message.jobId,
@@ -488,6 +574,14 @@ const runRender = async (message: RenderWorkerStartMessage): Promise<void> => {
       validation,
     });
   } catch (error) {
+    if (shouldRetryRender(message.jobId, error)) {
+      retriedJobs.add(message.jobId);
+      // 在 finally 清理完成后重新渲染,只重试一次。
+      setImmediate(() => {
+        void runRender(message);
+      });
+      return;
+    }
     const cancelled = isCancelledRender(message.jobId, error);
     emit({
       type: "error",

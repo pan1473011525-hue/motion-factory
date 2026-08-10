@@ -14,6 +14,34 @@ export const frameFromTimelinePointer = (
   return Math.round(progress * (durationInFrames - 1));
 };
 
+export type SnapResult = {
+  frame: number;
+  snapped: boolean;
+};
+
+/**
+ * 把目标帧吸附到最近的吸附点(容差帧数内)。拖动时按住 Alt 可临时禁用。
+ */
+export const snapFrame = (
+  frame: number,
+  targets: ReadonlyArray<number>,
+  tolerance = 6,
+): SnapResult => {
+  if (targets.length === 0) return {frame, snapped: false};
+  let nearest = frame;
+  let nearestDistance = Number.POSITIVE_INFINITY;
+  for (const target of targets) {
+    const distance = Math.abs(target - frame);
+    if (distance < nearestDistance) {
+      nearest = target;
+      nearestDistance = distance;
+    }
+  }
+  return nearestDistance <= tolerance
+    ? {frame: nearest, snapped: true}
+    : {frame, snapped: false};
+};
+
 export const chooseMotionDropPhase = (
   progress: number,
   phases: ReadonlyArray<MotionDropPhase>,

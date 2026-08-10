@@ -7,6 +7,7 @@ export const exportPresetIdSchema = z.enum([
   "prores-4444-xq",
   "png-sequence",
   "h264-review",
+  "lottie-json",
 ]);
 
 export const frameRateSchema = z.object({
@@ -113,6 +114,12 @@ export const composerNodeMotionSchema = z.object({
   exitDuration: z.number().int().min(1).max(3_600),
   loop: composerMotionPresetIdSchema,
   intensity: z.number().min(0).max(2),
+  // mix:入场/退场/持续三通道的强度权重(0..1),可叠加时按权重混合,默认全量。
+  mix: z.object({
+    enter: z.number().min(0).max(1),
+    exit: z.number().min(0).max(1),
+    loop: z.number().min(0).max(1),
+  }).default({enter: 1, exit: 1, loop: 1}),
 });
 
 export const composerNodeSchema = z.object({
@@ -132,6 +139,20 @@ export const composerCompositionSchema = z.object({
   snapToGrid: z.boolean(),
   gridSize: z.number().min(0.005).max(0.25),
   nodes: z.array(composerNodeSchema).max(200),
+});
+
+// 具名时间槽(Time Events):时间轴上的可拖拽标记点,供模板动画对齐/分段导出等消费。
+export const timeSlotSchema = z.object({
+  id: z.string().uuid(),
+  label: z.string().trim().min(1).max(24),
+  frame: z.number().int().min(0),
+});
+
+// 分段点:把画布时长切分为多个导出段落,导出时生成 sections.json 元数据。
+export const segmentSchema = z.object({
+  id: z.string().uuid(),
+  label: z.string().trim().min(1).max(24),
+  frame: z.number().int().min(0),
 });
 
 export const createEmptyComposerComposition = (): ComposerComposition => ({
@@ -157,6 +178,8 @@ export const motionProjectSchema = z.object({
   exportOptions: projectExportOptionsSchema.default({conflictPolicy: "version"}),
   editorMode: z.enum(["template", "composer"]).default("template"),
   composition: composerCompositionSchema.default(createEmptyComposerComposition),
+  timeSlots: z.array(timeSlotSchema).default([]),
+  segments: z.array(segmentSchema).default([]),
   exportPresetId: exportPresetIdSchema,
   updatedAt: z.string().datetime({offset: true}),
 });
@@ -185,6 +208,8 @@ export type ProjectAsset = z.infer<typeof projectAssetSchema>;
 export type ProjectAnimation = z.infer<typeof projectAnimationSchema>;
 export type ProjectTypography = z.infer<typeof projectTypographySchema>;
 export type ProjectExportOptions = z.infer<typeof projectExportOptionsSchema>;
+export type TimeSlot = z.infer<typeof timeSlotSchema>;
+export type Segment = z.infer<typeof segmentSchema>;
 export type ComposerComponentId = z.infer<typeof composerComponentIdSchema>;
 export type ComposerMotionPresetId = z.infer<typeof composerMotionPresetIdSchema>;
 export type ComposerNodeTransform = z.infer<typeof composerNodeTransformSchema>;

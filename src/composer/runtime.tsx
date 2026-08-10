@@ -67,8 +67,12 @@ export const getComposerMotionStyle = (
   const exitProgress = interpolate(frame, [Math.max(0, duration - exitFrames), Math.max(1, duration - 1)], [1, 0], {extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: ease});
   const enterPreset = reducedMotion && node.motion.enter !== "none" ? "fade" : node.motion.enter;
   const exitPreset = reducedMotion && node.motion.exit !== "none" ? "fade" : node.motion.exit;
-  const enter = getRevealStyle(enterPreset, enterProgress, node.motion.intensity, unit);
-  const exit = getRevealStyle(exitPreset, exitProgress, node.motion.intensity, unit);
+  // mix 权重:各通道效果按 0..1 权重插值(1 还原原行为,0 关闭该通道)。
+  const mix = node.motion.mix ?? {enter: 1, exit: 1, loop: 1};
+  const weightedEnter = 1 + (enterProgress - 1) * mix.enter;
+  const weightedExit = 1 - (1 - exitProgress) * mix.exit;
+  const enter = getRevealStyle(enterPreset, weightedEnter, node.motion.intensity, unit);
+  const exit = getRevealStyle(exitPreset, weightedExit, node.motion.intensity, unit);
   const seconds = frame / Math.max(1, fps) * speed;
   let loopX = 0;
   let loopY = 0;
@@ -77,11 +81,11 @@ export const getComposerMotionStyle = (
   let loopOpacity = 1;
   if (!reducedMotion && motionSupportsLoop(node.motion.loop)) {
     const wave = Math.sin(seconds * Math.PI * 2 / 2.4);
-    if (node.motion.loop === "float") loopY = wave * 12 * node.motion.intensity * unit;
-    if (node.motion.loop === "drift") loopX = wave * 14 * node.motion.intensity * unit;
-    if (node.motion.loop === "pulse") loopScale = 1 + wave * 0.025 * node.motion.intensity;
-    if (node.motion.loop === "rotate") loopRotate = seconds * 12 * node.motion.intensity;
-    if (node.motion.loop === "breathe") loopOpacity = 0.88 + (wave + 1) * 0.06;
+    if (node.motion.loop === "float") loopY = wave * 12 * node.motion.intensity * unit * mix.loop;
+    if (node.motion.loop === "drift") loopX = wave * 14 * node.motion.intensity * unit * mix.loop;
+    if (node.motion.loop === "pulse") loopScale = 1 + wave * 0.025 * node.motion.intensity * mix.loop;
+    if (node.motion.loop === "rotate") loopRotate = seconds * 12 * node.motion.intensity * mix.loop;
+    if (node.motion.loop === "breathe") loopOpacity = 1 + (0.88 + (wave + 1) * 0.06 - 1) * mix.loop;
   }
   return {
     opacity: node.transform.opacity * enter.opacity * exit.opacity * loopOpacity,

@@ -273,7 +273,7 @@ export const createComposerNode = (
       zIndex,
     },
     timing: {from: 0, durationInFrames: Math.max(1, durationInFrames)},
-    motion: {enter: "fade", enterDuration: 15, exit: "fade", exitDuration: 15, loop: "none", intensity: 1},
+    motion: {enter: "fade", enterDuration: 15, exit: "fade", exitDuration: 15, loop: "none", intensity: 1, mix: {enter: 1, exit: 1, loop: 1}},
     props: structuredClone(definition.defaultProps),
     hidden: false,
     locked: false,

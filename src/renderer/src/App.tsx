@@ -13,6 +13,8 @@ import {
   type ComposerNode,
   type FrameRate,
   type MotionProject,
+  type Segment,
+  type TimeSlot,
 } from "../../../packages/project-model/src";
 import {
   validateTemplateAssets,
@@ -141,9 +143,11 @@ export const App: React.FC = () => {
   const [previewBackground, setPreviewBackground] = useState<PreviewBackground>("checker");
   const [previewBackgroundImage, setPreviewBackgroundImage] = useState<string | null>(null);
   const [previewZoom, setPreviewZoom] = useState(100);
+  const [previewLowQuality, setPreviewLowQuality] = useState(false);
   const [currentFrame, setCurrentFrame] = useState(0);
   const [batchDraft, setBatchDraft] = useState<BatchDraft | null>(null);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [multiSelectedIds, setMultiSelectedIds] = useState<string[]>([]);
   const [composerPreview, setComposerPreview] = useState<ComposerComposition | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const revisionRef = useRef(0);
@@ -207,6 +211,7 @@ export const App: React.FC = () => {
       setSaveDetail(session.path ? "项目已保存" : "新项目尚未保存");
       setProjectError(null);
       setSelectedNodeId(upgraded.editorMode === "composer" ? upgraded.composition.nodes.at(-1)?.id ?? null : null);
+      setMultiSelectedIds([]);
       setComposerPreview(null);
       setIsPlaying(false);
       return true;
@@ -426,14 +431,14 @@ export const App: React.FC = () => {
       node.motion.exit = "none";
     }
     markChanged({...project, editorMode: "composer", composition: {...project.composition, nodes: [...project.composition.nodes, node]}});
-    setSelectedNodeId(node.id);
+    selectNodeOnly(node.id);
     playerRef.current?.seekTo(node.timing.from);
   };
 
   const enterComposerMode = (): void => {
     if (project.composition.nodes.length > 0) {
       markChanged({...project, editorMode: "composer"});
-      setSelectedNodeId(project.composition.nodes.at(-1)?.id ?? null);
+      selectNodeOnly(project.composition.nodes.at(-1)?.id ?? null);
       return;
     }
     const node = createComposerNode("template", globalThis.crypto.randomUUID(), project.canvas.durationInFrames, 0);
@@ -442,19 +447,91 @@ export const App: React.FC = () => {
     node.motion.enter = "none";
     node.motion.exit = "none";
     markChanged({...project, editorMode: "composer", composition: {...project.composition, nodes: [node]}});
-    setSelectedNodeId(node.id);
+    selectNodeOnly(node.id);
   };
 
   const updateSelectedNode = (node: ComposerNode): void => {
     commitComposition({...project.composition, nodes: project.composition.nodes.map((candidate) => candidate.id === node.id ? node : candidate)});
   };
 
+  const selectNodeOnly = (nodeId: string | null): void => {
+    setSelectedNodeId(nodeId);
+    setMultiSelectedIds(nodeId ? [nodeId] : []);
+  };
+
+  const selectNodeExtend = (nodeId: string, extend: boolean): void => {
+    setSelectedNodeId(nodeId);
+    if (!extend) {
+      setMultiSelectedIds([nodeId]);
+      return;
+    }
+    setMultiSelectedIds((current) => current.includes(nodeId)
+      ? current.filter((id) => id !== nodeId)
+      : [...current, nodeId]);
+  };
+
+  const deleteSelectedNodes = (ripple = false): void => {
+    const ids = multiSelectedIds.length > 0
+      ? multiSelectedIds
+      : selectedNodeId
+        ? [selectedNodeId]
+        : [];
+    if (ids.length === 0) return;
+    const allNodes = project.composition.nodes;
+    let remaining = allNodes.filter((node) => !ids.includes(node.id));
+    if (ripple) {
+      // 波纹删除:被删图层按起始帧从小到大处理,其后开始的图层左移被删时长。
+      const removed = allNodes
+        .filter((node) => ids.includes(node.id))
+        .sort((a, b) => a.timing.from - b.timing.from);
+      for (const target of removed) {
+        remaining = remaining.map((node) => node.timing.from >= target.timing.from
+          ? {...node, timing: {...node.timing, from: Math.max(0, node.timing.from - target.timing.durationInFrames)}}
+          : node);
+      }
+    }
+    commitComposition({...project.composition, nodes: remaining});
+    const next = remaining.sort((a, b) => a.transform.zIndex - b.transform.zIndex).at(-1);
+    selectNodeOnly(next?.id ?? null);
+  };
+
   const deleteSelectedNode = (): void => {
-    if (!selectedNodeId) return;
-    const index = project.composition.nodes.findIndex((node) => node.id === selectedNodeId);
-    const nodes = project.composition.nodes.filter((node) => node.id !== selectedNodeId);
-    commitComposition({...project.composition, nodes});
-    setSelectedNodeId(nodes[Math.min(index, nodes.length - 1)]?.id ?? null);
+    deleteSelectedNodes(false);
+  };
+
+  const deleteSelectedNodesRipple = (): void => {
+    deleteSelectedNodes(true);
+  };
+
+  const addTimeSlot = (): void => {
+    const slot: TimeSlot = {
+      id: globalThis.crypto.randomUUID(),
+      label: `标记 ${project.timeSlots.length + 1}`,
+      frame: currentFrame,
+    };
+    markChanged({...project, timeSlots: [...project.timeSlots, slot]});
+  };
+
+  const updateTimeSlotFrame = (slotId: string, frame: number): void => {
+    markChanged({...project, timeSlots: project.timeSlots.map((slot) => slot.id === slotId ? {...slot, frame: Math.max(0, Math.round(frame))} : slot)});
+  };
+
+  const removeTimeSlot = (slotId: string): void => {
+    markChanged({...project, timeSlots: project.timeSlots.filter((slot) => slot.id !== slotId)});
+  };
+
+  const addSegment = (): void => {
+    const frame = Math.max(1, Math.min(project.canvas.durationInFrames - 1, currentFrame));
+    if (project.segments.some((segment) => segment.frame === frame)) return;
+    const next: Segment[] = [
+      ...project.segments,
+      {id: globalThis.crypto.randomUUID(), label: `段 ${project.segments.length + 1}`, frame},
+    ].sort((a, b) => a.frame - b.frame);
+    markChanged({...project, segments: next});
+  };
+
+  const removeSegment = (segmentId: string): void => {
+    markChanged({...project, segments: project.segments.filter((segment) => segment.id !== segmentId)});
   };
 
   const duplicateSelectedNode = (): void => {
@@ -467,7 +544,7 @@ export const App: React.FC = () => {
     copy.transform.y = Math.min(1 - copy.transform.height, copy.transform.y + 0.025);
     copy.transform.zIndex = Math.max(-1, ...project.composition.nodes.map((node) => node.transform.zIndex)) + 1;
     commitComposition({...project.composition, nodes: [...project.composition.nodes, copy]});
-    setSelectedNodeId(copy.id);
+    selectNodeOnly(copy.id);
   };
 
   const moveSelectedLayer = (direction: "front" | "back" | "up" | "down"): void => {
@@ -485,7 +562,7 @@ export const App: React.FC = () => {
   const applyMotionPresetToNode = (nodeId: string, presetId: ComposerMotionPresetId, phase: "enter" | "exit" | "loop"): void => {
     const node = project.composition.nodes.find((candidate) => candidate.id === nodeId);
     if (!node) return;
-    setSelectedNodeId(node.id);
+    selectNodeOnly(node.id);
     commitComposition({...project.composition, nodes: project.composition.nodes.map((candidate) => candidate.id === node.id ? {...node, motion: {...node.motion, [phase]: presetId}} : candidate)});
     const previewFrame = phase === "exit"
       ? Math.max(node.timing.from, node.timing.from + node.timing.durationInFrames - node.motion.exitDuration - 1)
@@ -559,6 +636,7 @@ export const App: React.FC = () => {
       if (!target) return;
       if (target.closest(".composer-canvas-overlay, .composer-timeline .layer-timeline-row, .component-library, .inspector-panel")) return;
       setSelectedNodeId(null);
+      setMultiSelectedIds([]);
     };
     document.addEventListener("click", handleClick, true);
     return () => document.removeEventListener("click", handleClick, true);
@@ -853,6 +931,7 @@ export const App: React.FC = () => {
               <button type="button" className={safeArea ? "active" : ""} onClick={() => setSafeArea((current) => !current)}>安全区</button>
               <select aria-label="预览背景" value={previewBackground} onChange={(event) => setPreviewBackground(event.target.value as PreviewBackground)}><option value="checker">棋盘格</option><option value="black">黑底</option><option value="white">白底</option><option value="gray">50% 灰</option><option value="image">剪辑截图</option></select>
               {previewBackground === "image" && <button type="button" onClick={() => void choosePreviewBackgroundImage()}>选择截图</button>}
+              <button type="button" className={previewLowQuality ? "active" : ""} onClick={() => setPreviewLowQuality((current) => !current)} title="低配预览：以一半分辨率渲染预览，导出不受影响">低配预览</button>
               <select aria-label="预览缩放" value={previewZoom} onChange={(event) => setPreviewZoom(Number(event.target.value))}><option value={25}>25%</option><option value={50}>50%</option><option value={100}>100%</option></select>
               {project.editorMode === "composer" && <button type="button" onClick={() => addComposerComponent("template")}>加入当前模板</button>}
               <span className="preview-status"><span className="status-dot" />同源预览</span>
@@ -873,8 +952,8 @@ export const App: React.FC = () => {
                 ref={playerRef}
                 component={MotionerComposition}
                 durationInFrames={project.canvas.durationInFrames}
-                compositionWidth={project.canvas.width}
-                compositionHeight={project.canvas.height}
+                compositionWidth={previewLowQuality ? Math.max(160, Math.round(project.canvas.width / 2)) : project.canvas.width}
+                compositionHeight={previewLowQuality ? Math.max(120, Math.round(project.canvas.height / 2)) : project.canvas.height}
                 fps={fps}
                 inputProps={{mode: project.editorMode, templateId: manifest.id, templateProps: previewProps, composition: composerScene, assets: project.assets, motionSettings: project.animation, typography: project.typography}}
                 controls={project.editorMode === "template"}
@@ -882,7 +961,7 @@ export const App: React.FC = () => {
                 clickToPlay={project.editorMode === "template"}
                 style={{width: "100%", aspectRatio: `${project.canvas.width} / ${project.canvas.height}`}}
               />
-              {project.editorMode === "composer" && <ComposerCanvasOverlay composition={composerScene} selectedNodeId={selectedNodeId} currentFrame={currentFrame} onSelect={setSelectedNodeId} onPreview={setComposerPreview} onCommit={commitComposition} />}
+              {project.editorMode === "composer" && <ComposerCanvasOverlay composition={composerScene} selectedNodeId={selectedNodeId} currentFrame={currentFrame} onSelect={selectNodeOnly} onPreview={setComposerPreview} onCommit={commitComposition} />}
               {safeArea && <div className="safe-area-overlay" aria-hidden="true"><span /></div>}
             </div>
           </div>
@@ -892,7 +971,7 @@ export const App: React.FC = () => {
             <div className={`timeline-track mode-${manifest.durationMode}`} aria-label={`${manifest.durationMode} 时长模式`}><span className="timeline-intro" /><span className="timeline-hold" /><span className="timeline-outro" /></div>
             <span>{formatTimecode(project.canvas.durationInFrames - 1, project.canvas.fps)}</span>
             <span>{currentFrame + 1} / {project.canvas.durationInFrames} 帧</span>
-          </div> : <ComposerTimeline composition={composerScene} selectedNodeId={selectedNodeId} currentFrame={currentFrame} durationInFrames={project.canvas.durationInFrames} fps={project.canvas.fps} isPlaying={isPlaying} onTogglePlayback={togglePlayback} onSelect={setSelectedNodeId} onPreview={setComposerPreview} onCommit={commitComposition} onDelete={deleteSelectedNode} onDuplicate={duplicateSelectedNode} onMoveLayer={moveSelectedLayer} onSeekStart={beginTimelineScrub} onSeek={seekTimelineFrame} onSeekEnd={endTimelineScrub} onApplyMotion={applyMotionPresetToNode} />}
+          </div> : <ComposerTimeline composition={composerScene} selectedNodeId={selectedNodeId} multiSelectedIds={multiSelectedIds} timeSlots={project.timeSlots} currentFrame={currentFrame} durationInFrames={project.canvas.durationInFrames} fps={project.canvas.fps} isPlaying={isPlaying} onTogglePlayback={togglePlayback} onSelect={selectNodeExtend} onPreview={setComposerPreview} onCommit={commitComposition} onValidate={(scene) => validateComposerComposition(scene, project.assets, project.canvas.durationInFrames) === null} onDelete={deleteSelectedNode} onDeleteRipple={deleteSelectedNodesRipple} onDuplicate={duplicateSelectedNode} onMoveLayer={moveSelectedLayer} onSeekStart={beginTimelineScrub} onSeek={seekTimelineFrame} onSeekEnd={endTimelineScrub} onApplyMotion={applyMotionPresetToNode} onAddTimeSlot={addTimeSlot} onUpdateTimeSlotFrame={updateTimeSlotFrame} onRemoveTimeSlot={removeTimeSlot} segments={project.segments} onAddSegment={addSegment} onRemoveSegment={removeSegment} />}
         </section>
 
         <aside className="inspector-panel" aria-label="参数检查器">

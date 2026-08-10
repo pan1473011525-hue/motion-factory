@@ -8,9 +8,18 @@ importers:
 
   .:
     dependencies:
+      '@remotion/animation-utils':
+        specifier: 4.0.507
+        version: 4.0.507(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       '@remotion/cli':
         specifier: 4.0.507
         version: 4.0.507(postcss@8.5.26)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(supports-color@8.1.1)(typescript@5.9.3)
+      '@remotion/media':
+        specifier: 4.0.507
+        version: 4.0.507(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
+      '@remotion/media-utils':
+        specifier: 4.0.507
+        version: 4.0.507(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       '@remotion/player':
         specifier: 4.0.507
         version: 4.0.507(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
@@ -722,6 +731,12 @@ packages:
     resolution: {integrity: sha512-ODOov0sGMJMf3jPonOkgGqPknTsu+DdQ7kD++gz8aI+aFMOMHFbWAA2taqXXVTdP+OTOQR/znGvSpmkeI0WTYQ==}
     engines: {node: '>=14.18.0'}
 
+  '@remotion/animation-utils@4.0.507':
+    resolution: {integrity: sha512-HgYB41hye6rJkk76eWnaMdp7mVCgFY+S0vUwDhYoHaK7wpVOPSmLNKne74HXSZelhJz9UeUCyyL5+RSYmtMbMA==}
+    peerDependencies:
+      react: '>=16.8.0'
+      react-dom: '>=16.8.0'
+
   '@remotion/bundler@4.0.507':
     resolution: {integrity: sha512-SECbwvydNg9XgHcKQkiiYQM92v4FHBADpTb5xlyGROWQ4qA1wySYdDfdMmd0WVQfCV1Zi9JPRDQAW8nDBW33VQ==}
     peerDependencies:
@@ -790,6 +805,12 @@ packages:
 
   '@remotion/media-utils@4.0.507':
     resolution: {integrity: sha512-Ncm9ATXVOJ7aFbGXycVAXo+ISp3PFZb2JYSnGBuzat+d03CLR3yyCzGPhovlZqhnP7UIaRJxo15I5DlUkiGxrQ==}
+    peerDependencies:
+      react: '>=16.8.0'
+      react-dom: '>=16.8.0'
+
+  '@remotion/media@4.0.507':
+    resolution: {integrity: sha512-PpSbLq0x2E/yZGHyYcGsFpUWcocy+w2uV64qcTgASSN3Vd2ZSwNAaAGrNCUD9nN3EUaHjsoqheL/o8cRTZZ06g==}
     peerDependencies:
       react: '>=16.8.0'
       react-dom: '>=16.8.0'
@@ -3720,6 +3741,12 @@ snapshots:
       tslib: 2.8.1
       webcrypto-core: 1.9.2
 
+  '@remotion/animation-utils@4.0.507(react-dom@19.2.3(react@19.2.3))(react@19.2.3)':
+    dependencies:
+      react: 19.2.3
+      react-dom: 19.2.3(react@19.2.3)
+      remotion: 4.0.507(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
+
   '@remotion/bundler@4.0.507(postcss@8.5.26)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)':
     dependencies:
       '@remotion/media-parser': 4.0.507
@@ -3832,6 +3859,14 @@ snapshots:
       react: 19.2.3
       react-dom: 19.2.3(react@19.2.3)
       remotion: 4.0.507(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
+
+  '@remotion/media@4.0.507(react-dom@19.2.3(react@19.2.3))(react@19.2.3)':
+    dependencies:
+      mediabunny: 1.50.8
+      react: 19.2.3
+      react-dom: 19.2.3(react@19.2.3)
+      remotion: 4.0.507(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
+      zod: 4.4.3
 
   '@remotion/player@4.0.507(react-dom@19.2.3(react@19.2.3))(react@19.2.3)':
     dependencies:
