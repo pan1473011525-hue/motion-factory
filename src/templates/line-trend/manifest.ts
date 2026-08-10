@@ -1,0 +1,11 @@
+import {zColor} from "@remotion/zod-types";
+import {z} from "zod";
+import {defineTemplateManifest} from "../../../packages/template-sdk/src";
+export const trendItemSchema = z.object({label: z.string().min(1).max(16), value: z.number().finite()});
+export const lineTrendSchema = z.object({title: z.string().min(1).max(36), items: z.array(trendItemSchema).min(2).max(12), source: z.string().max(56), showPoints: z.boolean(), accentColor: zColor(), stylePreset: z.enum(["editorial", "minimal", "vibrant"])});
+export type LineTrendProps = z.infer<typeof lineTrendSchema>;
+export const lineTrendManifest = defineTemplateManifest<LineTrendProps>({
+  id: "line-trend", compositionId: "LineTrend", version: "1.0.0", name: "折线趋势图", category: "chart", tags: ["折线", "趋势", "时间序列"], description: "展示时间序列变化并突出最新节点。", schema: lineTrendSchema,
+  defaultProps: {title: "搜索热度趋势", items: [{label: "周一", value: 22}, {label: "周二", value: 35}, {label: "周三", value: 31}, {label: "周四", value: 58}, {label: "周五", value: 72}, {label: "周六", value: 64}], source: "搜索指数", showPoints: true, accentColor: "#47A7FF", stylePreset: "editorial"},
+  fields: [{key: "title", label: "标题", section: "content", control: "text", maxLength: 36}, {key: "items", label: "趋势数据", section: "data", control: "data-array", columns: [{key: "label", label: "时间", kind: "text"}, {key: "value", label: "数值", kind: "number"}], minItems: 2, maxItems: 12, newItem: {label: "新节点", value: 50}}, {key: "showPoints", label: "显示节点", section: "layout", control: "boolean"}, {key: "source", label: "来源", section: "source", control: "text", maxLength: 56}, {key: "stylePreset", label: "样式预设", section: "style", control: "select", options: [{label: "新闻数据", value: "editorial"}, {label: "极简", value: "minimal"}, {label: "霓虹趋势", value: "vibrant"}]}, {key: "accentColor", label: "强调色", section: "style", control: "color"}], durationMode: "stretch", capabilities: {alpha: true, audio: false, mediaSlots: 0, minDurationFrames: 90, maxDurationFrames: 18_000, maxItems: 12, supportedAspectRatios: ["16:9", "9:16", "1:1", "custom"]}, stylePresets: [{id: "editorial", name: "新闻数据", patch: {stylePreset: "editorial"}}, {id: "minimal", name: "极简", patch: {stylePreset: "minimal"}}, {id: "vibrant", name: "霓虹趋势", patch: {stylePreset: "vibrant", accentColor: "#69F5D0"}}], migrations: [], preview: {accent: "#69F5D0", label: "↗ 72"},
+});

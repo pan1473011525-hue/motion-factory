@@ -1,0 +1,13 @@
+import {zColor} from "@remotion/zod-types";
+import {z} from "zod";
+import {defineTemplateManifest} from "../../../packages/template-sdk/src";
+
+export const rankingItemSchema = z.object({label: z.string().min(1).max(18), value: z.number().finite(), color: zColor()});
+export const horizontalRankingSchema = z.object({title: z.string().min(1).max(36), items: z.array(rankingItemSchema).min(1).max(12), source: z.string().max(56), sortDirection: z.enum(["descending", "original"]), accentColor: zColor(), stylePreset: z.enum(["editorial", "minimal", "vibrant"])});
+export type HorizontalRankingProps = z.infer<typeof horizontalRankingSchema>;
+export const horizontalRankingManifest = defineTemplateManifest<HorizontalRankingProps>({
+  id: "horizontal-ranking", compositionId: "HorizontalRanking", version: "1.0.0", name: "横向排名条形图", category: "chart", tags: ["排名", "条形图", "榜单"], description: "按数值展示可分页的横向排名，适合新闻与体育榜单。", schema: horizontalRankingSchema,
+  defaultProps: {title: "城市客流量排行", items: [{label: "上海", value: 128, color: "#47A7FF"}, {label: "北京", value: 112, color: "#73D2DE"}, {label: "成都", value: 96, color: "#9B8AFB"}, {label: "深圳", value: 84, color: "#FFB454"}, {label: "杭州", value: 72, color: "#67D49B"}], source: "示例统计", sortDirection: "descending", accentColor: "#47A7FF", stylePreset: "editorial"},
+  fields: [{key: "title", label: "标题", section: "content", control: "text", maxLength: 36}, {key: "items", label: "排名数据", section: "data", control: "data-array", columns: [{key: "label", label: "类目", kind: "text", width: 1.2}, {key: "value", label: "数值", kind: "number"}, {key: "color", label: "颜色", kind: "color", width: 0.55}], minItems: 1, maxItems: 12, newItem: {label: "新类目", value: 50, color: "#47A7FF"}}, {key: "sortDirection", label: "排序", section: "data", control: "select", options: [{label: "数值降序", value: "descending"}, {label: "保持输入顺序", value: "original"}]}, {key: "source", label: "来源", section: "source", control: "text", maxLength: 56}, {key: "stylePreset", label: "样式预设", section: "style", control: "select", options: [{label: "新闻数据", value: "editorial"}, {label: "极简白线", value: "minimal"}, {label: "高对比体育", value: "vibrant"}]}, {key: "accentColor", label: "强调色", section: "style", control: "color"}],
+  durationMode: "paginate", capabilities: {alpha: true, audio: false, mediaSlots: 0, minDurationFrames: 120, maxDurationFrames: 18_000, maxItems: 12, supportedAspectRatios: ["16:9", "9:16", "1:1", "custom"]}, stylePresets: [{id: "editorial", name: "新闻数据", patch: {stylePreset: "editorial"}}, {id: "minimal", name: "极简白线", patch: {stylePreset: "minimal"}}, {id: "vibrant", name: "高对比体育", patch: {stylePreset: "vibrant"}}], migrations: [], preview: {accent: "#73D2DE", label: "01  上海"},
+});

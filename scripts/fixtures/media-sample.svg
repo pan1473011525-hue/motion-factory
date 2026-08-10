@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900">
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#123A62"/>
+      <stop offset="0.5" stop-color="#2377A8"/>
+      <stop offset="1" stop-color="#41C7A4"/>
+    </linearGradient>
+  </defs>
+  <rect width="1600" height="900" fill="url(#background)"/>
+  <circle cx="1250" cy="220" r="360" fill="#A9FFE6" fill-opacity="0.18"/>
+  <path d="M0 760 L420 430 L720 650 L1060 300 L1600 720 L1600 900 L0 900Z" fill="#06131E" fill-opacity="0.42"/>
+  <text x="100" y="130" fill="white" font-family="-apple-system, sans-serif" font-size="52" font-weight="700">MOTIONER MEDIA TEST</text>
+  <text x="102" y="194" fill="white" fill-opacity="0.7" font-family="-apple-system, sans-serif" font-size="28">Local image · transparent overlay fixture</text>
+</svg>

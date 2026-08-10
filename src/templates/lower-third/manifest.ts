@@ -1,0 +1,10 @@
+import {zColor} from "@remotion/zod-types";
+import {z} from "zod";
+import {defineTemplateManifest} from "../../../packages/template-sdk/src";
+export const lowerThirdSchema = z.object({title: z.string().min(1).max(36), subtitle: z.string().max(56), logoAssetId: z.string(), position: z.enum(["left", "right"]), accentColor: zColor(), stylePreset: z.enum(["editorial", "minimal", "vibrant"])});
+export type LowerThirdProps = z.infer<typeof lowerThirdSchema>;
+export const lowerThirdManifest = defineTemplateManifest<LowerThirdProps>({
+  id: "lower-third", compositionId: "LowerThird", version: "1.0.0", name: "下三分之一字幕条", category: "subtitle", tags: ["字幕条", "人名条", "标题", "Logo"], description: "专业采访人名条与节目字幕，可选 Logo 和左右布局。", schema: lowerThirdSchema,
+  defaultProps: {title: "陈屿", subtitle: "纪录片导演 / Motioner 用户", logoAssetId: "", position: "left", accentColor: "#47A7FF", stylePreset: "editorial"},
+  fields: [{key: "title", label: "主标题", section: "content", control: "text", maxLength: 36}, {key: "subtitle", label: "副标题", section: "content", control: "text", maxLength: 56}, {key: "logoAssetId", label: "Logo", section: "data", control: "media", accept: ["image"]}, {key: "position", label: "位置", section: "layout", control: "select", options: [{label: "左下", value: "left"}, {label: "右下", value: "right"}]}, {key: "stylePreset", label: "样式预设", section: "style", control: "select", options: [{label: "广播", value: "editorial"}, {label: "极简线", value: "minimal"}, {label: "体育", value: "vibrant"}]}, {key: "accentColor", label: "强调色", section: "style", control: "color"}], durationMode: "fixed-edges", capabilities: {alpha: true, audio: false, mediaSlots: 1, minDurationFrames: 60, maxDurationFrames: 18_000, supportedAspectRatios: ["16:9", "9:16", "1:1", "custom"]}, stylePresets: [{id: "editorial", name: "广播", patch: {stylePreset: "editorial"}}, {id: "minimal", name: "极简线", patch: {stylePreset: "minimal"}}, {id: "vibrant", name: "体育", patch: {stylePreset: "vibrant", accentColor: "#C7FF4A"}}], migrations: [], preview: {accent: "#47A7FF", label: "NAME / TITLE"},
+});
