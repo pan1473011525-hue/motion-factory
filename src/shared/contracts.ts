@@ -176,6 +176,7 @@ export type RecoverySnapshot = {
 };
 
 export type MenuCommand = "new" | "open" | "save" | "save-as";
+export type CloseProjectDecision = "save" | "discard" | "cancel";
 
 export type MotionerApi = {
   newProject: () => Promise<ProjectSession>;
@@ -188,6 +189,7 @@ export type MotionerApi = {
   restoreRecovery: () => Promise<ProjectSession | null>;
   discardRecovery: () => Promise<void>;
   setProjectDirty: (dirty: boolean) => void;
+  onRequestProjectClose: (listener: () => Promise<CloseProjectDecision>) => () => void;
   onSaveBeforeClose: (listener: () => Promise<boolean>) => () => void;
   reportRendererError: (report: RendererErrorReport) => void;
   selectMedia: (request: MediaSelectionRequest) => Promise<ProjectAsset | null>;

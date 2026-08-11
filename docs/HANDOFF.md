@@ -109,13 +109,22 @@
 - 时间线素材条、轨道、裁剪柄和动效关键点交互均先选中图层；时间线根节点 pointer capture 会重定向后续 click，因此全时间线被纳入全局选中保留区。画布顶部移除重复运输控制，只保留视图、性能、场景动作和状态，下方时间线成为唯一完整运输区。
 - 新增统一下拉键盘导航、模板选择动作和关闭决策单测；真实 Electron 中验证静默恢复、退出取消、下拉向下展开、模板强制播放、时间线拖动选中及变换面板对齐。`test:exports` 五类真实输出、打包应用三段 E2E、8 项离线完整性及 `hdiutil verify` 均通过。
 
+### 14. UI 阶段三实测问题修订（三）(2026-08-11)
+- 顶栏清晰度与画面方向拆分独立焦点容器，消除点击清晰度时方向按钮联动高亮；统一下拉按实际文字测量宽度、居中锚定并限制在视口内，选项勾选列使用对称布局保持文字居中。
+- 右侧检查器短枚举字段改为左标签、右下拉的紧凑单行；入场/持续/退场动效的“重置/清除”移到带上分隔线的独立分组动作区，清除仅在 hover 时呈危险色。
+- 左上品牌精简为图标和 Motioner；项目名称支持点击直接编辑，Enter/失焦提交、Escape 取消，并继续进入既有 dirty/撤销/保存流程。
+- dirty 退出询问由原生 macOS 对话框替换为 Motioner 深色应用内模态框；renderer/preload/main 使用语义化 `save/discard/cancel` 握手，保存取消、失败或超时均中止退出。
+- 顶栏控件统一 34px 垂直节奏；新增全局延迟悬停提示，优先读取可访问名称，下拉展开时强制隐藏提示避免重叠。
+- 所有具有已知默认值的滑块支持双击重置，覆盖模板 manifest 参数、组件默认参数、时间、变换、动效、模组外观与预览播放头；新增菜单几何边界单测。
+- 方案固定于 `docs/UI_UX_REFINEMENT_EXECUTION_PLAN_V3.md`。真实 Electron 已验证焦点隔离、菜单居中、重命名、紧凑检查器、动效动作区、滑块重置和退出取消；`pnpm check` 30 文件/84 测试、`test:exports` 五类输出、打包应用三段/75 帧 E2E、8 项离线完整性及 `hdiutil verify` 均通过。
+
 ---
 
 ## 三、当前项目状态
 
 - **版本**:1.3.1(应用版本号未随功能递增;如需发版请先更新 `package.json` version 与 README)。
-- **测试**:`pnpm check` 全绿 —— 29 个测试文件 / 82 项测试(lint + tsc + vitest)。
-- **构建产物**:`release/Motioner-1.3.1-arm64.dmg`(274,252,227 bytes,约 261.5 MiB)+ `Motioner-integrity.json` + `SHA256SUMS.txt`;当前 DMG SHA256:`ad0cfb312340bc5f7a4b7d0b800dd96d3b63e386acc8b2e19a915e363e0daec4`。
+- **测试**:`pnpm check` 全绿 —— 30 个测试文件 / 84 项测试(lint + tsc + vitest)。
+- **构建产物**:`release/Motioner-1.3.1-arm64.dmg`(274,255,266 bytes,约 261.5 MiB)+ `Motioner-integrity.json` + `SHA256SUMS.txt`;当前 DMG SHA256:`3a7c9f4c58cbb33b095a26fa9e944f5d0ac9b90ac2a77961b3d5f1cf35309901`。
 - **Git**:方向 9、UI 重构阶段一/二/三及阶段三实测修订均已实现;`docs/CODEX_HANDOFF_PROMPT.md`、`docs/design-reference/`、`docs/ui-redesign-plan.md` 为本轮开始前已存在的未跟踪用户资料,未纳入提交。
 - **新增依赖**:`@remotion/media`、`@remotion/media-utils`、`@remotion/animation-utils`(均 4.0.507)、`lucide-react`(1.30.0),均已入 `package.json` 与 lock。
 
@@ -183,3 +192,4 @@ pnpm package:dmg      # 完整打包:build + electron-builder + verify + package
 - 2026-08-11:完成 UI 重构阶段三——模板快速编辑/预览/导出、组件拖入落点、可拖动效关键点、固定检查器动作区和长文本/最小窗口稳定性;重新打包 v1.3.1 DMG 并更新 SHA256。三阶段 UI 重构完成,等待最终验收。
 - 2026-08-11:完成阶段三实测问题修订——模组底色/透明度、播放控制、分辨率逻辑、紧凑属性、拖放式动效库、统一时间线和可自定义快捷键;重新打包 v1.3.1 DMG,更新完整性清单与 SHA256,全部自动检查和真实导出验证通过。
 - 2026-08-11:完成阶段三实测问题修订（二）——8 秒静默恢复与 dirty 退出询问、全应用统一下拉、纯数字输入与紧凑变换区、模板强制演示、时间线条选中和重复运输控件清理；实施范围与验收固定于 `docs/UI_UX_REFINEMENT_EXECUTION_PLAN_V2.md`。
+- 2026-08-11:完成阶段三实测问题修订（三）——顶栏焦点隔离与控件统一、内容自适应下拉、紧凑右栏与动效动作区、品牌精简、项目重命名、应用内退出弹窗、全局悬停提示及滑块双击重置；重新打包 v1.3.1 DMG，更新完整性清单与 SHA256，实施范围固定于 `docs/UI_UX_REFINEMENT_EXECUTION_PLAN_V3.md`。

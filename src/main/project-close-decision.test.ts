@@ -6,14 +6,13 @@ describe("decideProjectCloseAction", () => {
     expect(decideProjectCloseAction(false)).toBe("close");
   });
 
-  it("maps the native prompt choices to save, discard, and cancel", () => {
-    expect(decideProjectCloseAction(true, 0)).toBe("save");
-    expect(decideProjectCloseAction(true, 1)).toBe("discard");
-    expect(decideProjectCloseAction(true, 2)).toBe("cancel");
+  it("maps the app prompt choices to save, discard, and cancel", () => {
+    expect(decideProjectCloseAction(true, "save")).toBe("save");
+    expect(decideProjectCloseAction(true, "discard")).toBe("discard");
+    expect(decideProjectCloseAction(true, "cancel")).toBe("cancel");
   });
 
   it("cancels safely when the prompt response is missing or unknown", () => {
     expect(decideProjectCloseAction(true)).toBe("cancel");
-    expect(decideProjectCloseAction(true, 99)).toBe("cancel");
   });
 });

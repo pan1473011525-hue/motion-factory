@@ -143,10 +143,11 @@ const DataArrayEditor: React.FC<{
 export const FieldControl: React.FC<{
   field: InspectorField;
   value: unknown;
+  defaultValue?: unknown;
   assets: ProjectAsset[];
   onChange: (value: unknown) => void;
   onPickMedia: () => Promise<void>;
-}> = ({field, value, assets, onChange, onPickMedia}) => {
+}> = ({field, value, defaultValue, assets, onChange, onPickMedia}) => {
   if (field.control === "data-array") {
     return <DataArrayEditor field={field} value={value} onChange={onChange} />;
   }
@@ -181,7 +182,7 @@ export const FieldControl: React.FC<{
     return <input className="switch-control" type="checkbox" checked={value === true} onChange={(event) => onChange(event.target.checked)} />;
   }
   if (field.control === "number") {
-    return <RangeNumberControl ariaLabel={field.label} value={typeof value === "number" ? value : 0} min={field.min ?? -1_000_000} max={field.max ?? 1_000_000} step={field.step ?? 1} showSlider={field.min !== undefined && field.max !== undefined} onChange={onChange} />;
+    return <RangeNumberControl ariaLabel={field.label} value={typeof value === "number" ? value : 0} min={field.min ?? -1_000_000} max={field.max ?? 1_000_000} step={field.step ?? 1} resetValue={typeof defaultValue === "number" ? defaultValue : undefined} showSlider={field.min !== undefined && field.max !== undefined} onChange={onChange} />;
   }
   if (field.control === "textarea") {
     return <textarea value={String(value ?? "")} maxLength={field.maxLength} rows={field.rows ?? 4} placeholder={field.placeholder} onChange={(event) => onChange(event.target.value)} />;
@@ -208,6 +209,7 @@ export const Inspector: React.FC<InspectorProps> = ({
               <FieldControl
                 field={field}
                 value={props[field.key]}
+                defaultValue={manifest.defaultProps[field.key]}
                 assets={assets}
                 onChange={(value) => onChange(field.key, value)}
                 onPickMedia={() => onPickMedia(field as Extract<InspectorField, {control: "media"}>)}

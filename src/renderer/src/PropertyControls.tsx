@@ -37,7 +37,7 @@ export const RangeNumberControl: React.FC<{
   sliderMax?: number;
 }> = ({ariaLabel, value, min, max, step = 1, onChange, resetValue, showSlider = true, sliderMin = min, sliderMax = max}) => (
   <div className={`range-number-control ${showSlider ? "" : "without-slider"}`.trim()}>
-    {showSlider && <input aria-label={`${ariaLabel}滑块`} type="range" min={sliderMin} max={sliderMax} step={step} value={clamp(value, sliderMin, sliderMax)} onChange={(event) => onChange(event.target.valueAsNumber)} />}
+    {showSlider && <input aria-label={`${ariaLabel}滑块`} type="range" min={sliderMin} max={sliderMax} step={step} value={clamp(value, sliderMin, sliderMax)} onChange={(event) => onChange(event.target.valueAsNumber)} onDoubleClick={() => resetValue !== undefined && onChange(resetValue)} data-tooltip={resetValue === undefined ? undefined : `双击重置${ariaLabel}`} />}
     <div className="compact-number-box"><DraftNumber ariaLabel={ariaLabel} value={value} min={min} max={max} step={step} onCommit={onChange} /></div>
     {resetValue !== undefined && <button type="button" className="compact-reset" disabled={value === resetValue} onClick={() => onChange(resetValue)} title={`重置${ariaLabel}`} aria-label={`重置${ariaLabel}`}><RotateCcw /></button>}
   </div>

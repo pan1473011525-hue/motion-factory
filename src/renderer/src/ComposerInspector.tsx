@@ -66,11 +66,11 @@ export const ComposerInspector: React.FC<{
     {orderedSections.map((section) => {
       const fields = definition.fields.filter((field) => field.section === section);
       if (fields.length === 0) return null;
-      return <InspectorGroup title={sectionLabels[section]} key={section}>{fields.map((field) => <label className={`field field-${field.control}`} key={field.key}><span>{field.label}</span><FieldControl field={field} value={node.props[field.key]} assets={assets} onChange={(value) => updateProp(field.key, value)} onPickMedia={() => onPickMedia(field as Extract<InspectorField, {control: "media"}>)} />{field.help && <small className="field-help">{field.help}</small>}</label>)}</InspectorGroup>;
+      return <InspectorGroup title={sectionLabels[section]} key={section}>{fields.map((field) => <label className={`field field-${field.control}`} key={field.key}><span>{field.label}</span><FieldControl field={field} value={node.props[field.key]} defaultValue={definition.defaultProps[field.key]} assets={assets} onChange={(value) => updateProp(field.key, value)} onPickMedia={() => onPickMedia(field as Extract<InspectorField, {control: "media"}>)} />{field.help && <small className="field-help">{field.help}</small>}</label>)}</InspectorGroup>;
     })}
     <InspectorGroup title="时间" className="timing-editor">
-      <CompactPropertyRow label="开始帧"><RangeNumberControl ariaLabel="开始帧" value={node.timing.from} min={0} max={Math.max(0, projectDurationInFrames - 1)} onChange={(from) => updateTiming({from, durationInFrames: Math.min(node.timing.durationInFrames, projectDurationInFrames - from)})} /></CompactPropertyRow>
-      <CompactPropertyRow label="持续帧" help={`结束于第 ${node.timing.from + node.timing.durationInFrames - 1} 帧`}><RangeNumberControl ariaLabel="持续帧" value={node.timing.durationInFrames} min={1} max={Math.max(1, projectDurationInFrames - node.timing.from)} onChange={(durationInFrames) => updateTiming({durationInFrames})} /></CompactPropertyRow>
+      <CompactPropertyRow label="开始帧"><RangeNumberControl ariaLabel="开始帧" value={node.timing.from} min={0} max={Math.max(0, projectDurationInFrames - 1)} resetValue={0} onChange={(from) => updateTiming({from, durationInFrames: Math.min(node.timing.durationInFrames, projectDurationInFrames - from)})} /></CompactPropertyRow>
+      <CompactPropertyRow label="持续帧" help={`结束于第 ${node.timing.from + node.timing.durationInFrames - 1} 帧`}><RangeNumberControl ariaLabel="持续帧" value={node.timing.durationInFrames} min={1} max={Math.max(1, projectDurationInFrames - node.timing.from)} resetValue={Math.max(1, projectDurationInFrames - node.timing.from)} onChange={(durationInFrames) => updateTiming({durationInFrames})} /></CompactPropertyRow>
     </InspectorGroup>
     {node.componentId === "template" && <InspectorGroup title="模板快照" className="template-node-summary"><dl><div><dt>模板</dt><dd>{String(node.props.templateId ?? "")}</dd></div><div><dt>参数</dt><dd>{Object.keys((node.props.templateProps as Record<string, unknown>) ?? {}).length} 项</dd></div></dl><small className="field-help">模板在转换时被冻结为参数快照。可继续移动、缩放、定时和添加动效。</small></InspectorGroup>}
   </> : <>
@@ -81,18 +81,18 @@ export const ComposerInspector: React.FC<{
       <MotionSelect label="动效" phase="enter" value={node.motion.enter} onChange={(enter) => updateMotion({enter})} />
       <CompactPropertyRow label="入场帧数"><RangeNumberControl ariaLabel="入场帧数" value={node.motion.enterDuration} min={1} max={Math.max(1, node.timing.durationInFrames)} resetValue={15} onChange={(enterDuration) => updateMotion({enterDuration})} /></CompactPropertyRow>
       <CompactPropertyRow label="入场强度"><RangeNumberControl ariaLabel="入场强度" value={Math.round(mix.enter * 100)} min={0} max={100} resetValue={100} onChange={(enter) => updateMotion({mix: {...mix, enter: enter / 100}})} /></CompactPropertyRow>
-      <div className="phase-motion-actions"><button type="button" onClick={() => updateMotion({enter: "fade", enterDuration: 15, mix: {...mix, enter: 1}})}><RotateCcw />重置</button><button type="button" onClick={() => updateMotion({enter: "none"})}><X />清除</button></div>
+      <div className="phase-motion-actions"><button type="button" className="motion-reset-action" onClick={() => updateMotion({enter: "fade", enterDuration: 15, mix: {...mix, enter: 1}})} title="重置入场动效" aria-label="重置入场动效"><RotateCcw />重置</button><button type="button" className="motion-clear-action" onClick={() => updateMotion({enter: "none"})} title="清除入场动效" aria-label="清除入场动效"><X />清除</button></div>
     </InspectorGroup>
     <InspectorGroup title="持续动效" defaultOpen className="node-motion-editor phase-motion-editor">
       <MotionSelect label="动效" phase="loop" value={node.motion.loop} onChange={(loop) => updateMotion({loop})} />
       <CompactPropertyRow label="持续强度"><RangeNumberControl ariaLabel="持续强度" value={Math.round(mix.loop * 100)} min={0} max={100} resetValue={100} onChange={(loop) => updateMotion({mix: {...mix, loop: loop / 100}})} /></CompactPropertyRow>
-      <div className="phase-motion-actions"><button type="button" onClick={() => updateMotion({loop: "none", mix: {...mix, loop: 1}})}><RotateCcw />重置</button><button type="button" onClick={() => updateMotion({loop: "none"})}><X />清除</button></div>
+      <div className="phase-motion-actions"><button type="button" className="motion-reset-action" onClick={() => updateMotion({loop: "none", mix: {...mix, loop: 1}})} title="重置持续动效" aria-label="重置持续动效"><RotateCcw />重置</button><button type="button" className="motion-clear-action" onClick={() => updateMotion({loop: "none"})} title="清除持续动效" aria-label="清除持续动效"><X />清除</button></div>
     </InspectorGroup>
     <InspectorGroup title="退场动效" defaultOpen className="node-motion-editor phase-motion-editor">
       <MotionSelect label="动效" phase="exit" value={node.motion.exit} onChange={(exit) => updateMotion({exit})} />
       <CompactPropertyRow label="退场帧数"><RangeNumberControl ariaLabel="退场帧数" value={node.motion.exitDuration} min={1} max={Math.max(1, node.timing.durationInFrames)} resetValue={15} onChange={(exitDuration) => updateMotion({exitDuration})} /></CompactPropertyRow>
       <CompactPropertyRow label="退场强度"><RangeNumberControl ariaLabel="退场强度" value={Math.round(mix.exit * 100)} min={0} max={100} resetValue={100} onChange={(exit) => updateMotion({mix: {...mix, exit: exit / 100}})} /></CompactPropertyRow>
-      <div className="phase-motion-actions"><button type="button" onClick={() => updateMotion({exit: "fade", exitDuration: 15, mix: {...mix, exit: 1}})}><RotateCcw />重置</button><button type="button" onClick={() => updateMotion({exit: "none"})}><X />清除</button></div>
+      <div className="phase-motion-actions"><button type="button" className="motion-reset-action" onClick={() => updateMotion({exit: "fade", exitDuration: 15, mix: {...mix, exit: 1}})} title="重置退场动效" aria-label="重置退场动效"><RotateCcw />重置</button><button type="button" className="motion-clear-action" onClick={() => updateMotion({exit: "none"})} title="清除退场动效" aria-label="清除退场动效"><X />清除</button></div>
     </InspectorGroup>
   </>}</>;
 };

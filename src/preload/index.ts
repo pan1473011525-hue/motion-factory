@@ -3,6 +3,7 @@ import type {
   AutosaveResult,
   BatchRenderStartRequest,
   CollectAssetsResult,
+  CloseProjectDecision,
   MenuCommand,
   MotionerApi,
   MediaSelectionRequest,
@@ -40,6 +41,18 @@ const api: MotionerApi = {
     ipcRenderer.invoke("project:recovery:discard"),
   setProjectDirty: (dirty: boolean): void =>
     ipcRenderer.send("app:project-dirty", dirty),
+  onRequestProjectClose: (listener: () => Promise<CloseProjectDecision>): (() => void) => {
+    const handler = async (_event: Electron.IpcRendererEvent, requestId: string): Promise<void> => {
+      let decision: CloseProjectDecision = "cancel";
+      try {
+        decision = await listener();
+      } finally {
+        ipcRenderer.send("app:close-decision-result", {requestId, decision});
+      }
+    };
+    ipcRenderer.on("app:request-close-decision", handler);
+    return () => ipcRenderer.removeListener("app:request-close-decision", handler);
+  },
   onSaveBeforeClose: (listener: () => Promise<boolean>): (() => void) => {
     const handler = async (_event: Electron.IpcRendererEvent, requestId: string): Promise<void> => {
       let saved = false;

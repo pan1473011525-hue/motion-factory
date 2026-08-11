@@ -2,6 +2,7 @@ import {Check, ChevronDown} from "lucide-react";
 import {useCallback, useId, useLayoutEffect, useRef, useState} from "react";
 import {createPortal} from "react-dom";
 import {findSelectBoundary, moveSelectIndex} from "./select-navigation";
+import {getSelectMenuGeometry} from "./select-position";
 
 export type SelectOption = {
   value: string;
@@ -35,19 +36,25 @@ export const Select: React.FC<{
   const selected = options[selectedIndex];
 
   const updatePosition = useCallback((): void => {
-    const rect = buttonRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    const viewportPadding = 8;
-    const contentWidth = Math.max(140, ...options.map((option) => Array.from(option.label).length * 12 + 42));
-    const width = Math.min(Math.max(rect.width, contentWidth), Math.min(360, window.innerWidth - viewportPadding * 2));
-    const left = Math.min(Math.max(viewportPadding, rect.left), window.innerWidth - width - viewportPadding);
-    const top = rect.bottom + 5;
-    setPosition({
-      top,
-      left,
-      width,
-      maxHeight: Math.max(88, window.innerHeight - top - viewportPadding),
-    });
+    const trigger = buttonRef.current;
+    const rect = trigger?.getBoundingClientRect();
+    if (!trigger || !rect) return;
+    const canvas = document.createElement("canvas");
+    const context = canvas.getContext("2d");
+    const computed = window.getComputedStyle(trigger);
+    if (context) context.font = `${computed.fontWeight} ${computed.fontSize} ${computed.fontFamily}`;
+    const contentWidth = Math.ceil(Math.max(
+      0,
+      ...options.map((option) => context?.measureText(option.label).width ?? option.label.length * 10),
+    )) + 58;
+    setPosition(getSelectMenuGeometry({
+      triggerLeft: rect.left,
+      triggerBottom: rect.bottom,
+      triggerWidth: rect.width,
+      contentWidth,
+      viewportWidth: window.innerWidth,
+      viewportHeight: window.innerHeight,
+    }));
   }, [options]);
 
   const openMenu = (edge?: "first" | "last"): void => {

@@ -37,6 +37,7 @@ import {
   type StartBatchRenderResult,
   type QueuedRenderResult,
   type CollectAssetsResult,
+  type CloseProjectDecision,
   type PresetImportResult,
   type RelinkAssetsResult,
 } from "../shared/contracts";
@@ -71,6 +72,7 @@ let closePromptActive = false;
 let packagedE2EJobId: string | null = null;
 let packagedE2EOutput: string | null = null;
 const closeSaveResolvers = new Map<string, (saved: boolean) => void>();
+const closeDecisionResolvers = new Map<string, (decision: CloseProjectDecision) => void>();
 type QueuedRenderJob = Extract<RenderWorkerMessage, {type: "start"}>;
 const renderJobQueue = new RenderJobQueue<QueuedRenderJob>();
 
@@ -95,6 +97,21 @@ const requestRendererSaveBeforeClose = (window: BrowserWindow): Promise<boolean>
       resolve(saved);
     });
     window.webContents.send("app:save-before-close", requestId);
+  });
+
+const requestRendererCloseDecision = (window: BrowserWindow): Promise<CloseProjectDecision> =>
+  new Promise((resolve) => {
+    const requestId = randomUUID();
+    const timeout = setTimeout(() => {
+      closeDecisionResolvers.delete(requestId);
+      resolve("cancel");
+    }, 120_000);
+    closeDecisionResolvers.set(requestId, (decision) => {
+      clearTimeout(timeout);
+      closeDecisionResolvers.delete(requestId);
+      resolve(decision);
+    });
+    window.webContents.send("app:request-close-decision", requestId);
   });
 
 const touchProject = (project: MotionProject, name = project.name): MotionProject =>
@@ -389,17 +406,7 @@ const createWindow = (): void => {
     void (async () => {
       let closeAction = decideProjectCloseAction(rendererHasUnsavedChanges);
       if (rendererHasUnsavedChanges) {
-        const result = await dialog.showMessageBox(window, {
-          type: "warning",
-          title: "保存本次项目？",
-          message: "当前项目有未保存的修改。",
-          detail: "自动恢复快照不能代替项目文件。是否在退出前保存？",
-          buttons: ["保存并退出", "不保存", "取消"],
-          defaultId: 0,
-          cancelId: 2,
-          noLink: true,
-        });
-        closeAction = decideProjectCloseAction(true, result.response);
+        closeAction = decideProjectCloseAction(true, await requestRendererCloseDecision(window));
         if (closeAction === "cancel") {
           quitRequested = false;
           return;
@@ -575,6 +582,14 @@ ipcMain.handle("project:recovery:discard", async (): Promise<void> => {
 ipcMain.on("app:project-dirty", (event, dirty: unknown) => {
   if (event.sender !== mainWindow?.webContents || typeof dirty !== "boolean") return;
   rendererHasUnsavedChanges = dirty;
+});
+
+ipcMain.on("app:close-decision-result", (event, rawResult: unknown) => {
+  if (event.sender !== mainWindow?.webContents || typeof rawResult !== "object" || rawResult === null) return;
+  const requestId = Reflect.get(rawResult, "requestId");
+  const decision = Reflect.get(rawResult, "decision");
+  if (typeof requestId !== "string" || !["save", "discard", "cancel"].includes(String(decision))) return;
+  closeDecisionResolvers.get(requestId)?.(decision as CloseProjectDecision);
 });
 
 ipcMain.on("app:save-before-close-result", (event, rawResult: unknown) => {

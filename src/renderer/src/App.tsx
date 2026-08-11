@@ -8,6 +8,7 @@ import {
   Keyboard,
   LayoutTemplate,
   Pause,
+  Pencil,
   Play,
   Redo2,
   RotateCcw,
@@ -41,6 +42,7 @@ import {
 } from "../../../packages/template-sdk/src";
 import {
   type MenuCommand,
+  type CloseProjectDecision,
   type ProjectSession,
   type RecoverySnapshot,
   type RenderEvent,
@@ -75,6 +77,8 @@ import {TemplateAppearanceEditor} from "./TemplateAppearanceEditor";
 import {CompactPropertyRow, RangeNumberControl} from "./PropertyControls";
 import {ShortcutSettings} from "./ShortcutSettings";
 import {Select} from "./Select";
+import {CloseProjectDialog} from "./CloseProjectDialog";
+import {GlobalTooltip} from "./GlobalTooltip";
 import {getTemplateSelectionAction} from "./template-selection";
 import {findShortcutCommand, isEditableShortcutTarget, mergeShortcutBindings, type ShortcutBindingMap, type ShortcutCommandId} from "./shortcuts";
 import motionerIcon from "./assets/motioner-icon.png";
@@ -115,13 +119,16 @@ const DurationInput: React.FC<{
   seconds: number;
   frames: number;
   onCommit: (seconds: number) => void;
-}> = ({seconds, frames, onCommit}) => <CompactPropertyRow label="目标时长（秒）" help={`实际 ${seconds.toFixed(4)} 秒 · ${frames} 帧`}><RangeNumberControl ariaLabel="目标时长" value={Number(seconds.toFixed(3))} min={0.1} max={7200} sliderMax={Math.max(60, Math.ceil(seconds))} step={0.1} onChange={onCommit} /></CompactPropertyRow>;
+}> = ({seconds, frames, onCommit}) => <CompactPropertyRow label="目标时长（秒）" help={`实际 ${seconds.toFixed(4)} 秒 · ${frames} 帧`}><RangeNumberControl ariaLabel="目标时长" value={Number(seconds.toFixed(3))} min={0.1} max={7200} sliderMax={Math.max(60, Math.ceil(seconds))} step={0.1} resetValue={5} onChange={onCommit} /></CompactPropertyRow>;
 
 export const App: React.FC = () => {
   const [project, setProject] = useState<MotionProject>(makeInitialProject);
   const [undoStack, setUndoStack] = useState<MotionProject[]>([]);
   const [redoStack, setRedoStack] = useState<MotionProject[]>([]);
   const [projectPath, setProjectPath] = useState<string | null>(null);
+  const [renamingProject, setRenamingProject] = useState(false);
+  const [projectNameDraft, setProjectNameDraft] = useState("");
+  const [closeDialogOpen, setCloseDialogOpen] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [saveDetail, setSaveDetail] = useState("新项目尚未保存");
@@ -154,6 +161,8 @@ export const App: React.FC = () => {
   const playerRef = useRef<PlayerRef>(null);
   const scrubWasPlayingRef = useRef(false);
   const pendingTemplatePlaybackRef = useRef<string | null>(null);
+  const projectNameInputRef = useRef<HTMLInputElement>(null);
+  const closeDecisionResolverRef = useRef<((decision: CloseProjectDecision) => void) | null>(null);
   const batchCsvRef = useRef<HTMLInputElement>(null);
   const shortcutActionsRef = useRef<Partial<Record<ShortcutCommandId, () => void>>>({});
 
@@ -202,11 +211,48 @@ export const App: React.FC = () => {
     setSaveDetail("有未保存更改");
   }, []);
 
+  const beginProjectRename = (): void => {
+    setProjectNameDraft(project.name);
+    setRenamingProject(true);
+    window.requestAnimationFrame(() => projectNameInputRef.current?.select());
+  };
+
+  const cancelProjectRename = (): void => {
+    setProjectNameDraft(project.name);
+    setRenamingProject(false);
+  };
+
+  const commitProjectRename = (): void => {
+    const name = projectNameDraft.trim().slice(0, 96);
+    setRenamingProject(false);
+    if (!name || name === project.name) {
+      setProjectNameDraft(project.name);
+      return;
+    }
+    markChanged({...project, name});
+  };
+
+  const requestProjectCloseDecision = useCallback((): Promise<CloseProjectDecision> =>
+    new Promise((resolve) => {
+      closeDecisionResolverRef.current?.("cancel");
+      closeDecisionResolverRef.current = resolve;
+      setCloseDialogOpen(true);
+    }), []);
+
+  const resolveProjectCloseDecision = useCallback((decision: CloseProjectDecision): void => {
+    const resolve = closeDecisionResolverRef.current;
+    closeDecisionResolverRef.current = null;
+    setCloseDialogOpen(false);
+    resolve?.(decision);
+  }, []);
+
   const applySession = useCallback((session: ProjectSession): boolean => {
     try {
       const upgraded = upgradeProjectTemplate(session.project);
       revisionRef.current += 1;
       setProject(upgraded);
+      setProjectNameDraft(upgraded.name);
+      setRenamingProject(false);
       setUndoStack([]);
       setRedoStack([]);
       setProjectPath(session.path);
@@ -314,6 +360,7 @@ export const App: React.FC = () => {
   useEffect(() => window.motioner?.setProjectDirty(dirty), [dirty]);
 
   useEffect(() => window.motioner?.onSaveBeforeClose(() => saveProject(false)), [saveProject]);
+  useEffect(() => window.motioner?.onRequestProjectClose(requestProjectCloseDecision), [requestProjectCloseDecision]);
 
   useEffect(() => window.localStorage.setItem("motioner.favorites", JSON.stringify(favorites)), [favorites]);
   useEffect(() => window.localStorage.setItem("motioner.recentTemplates", JSON.stringify(recentTemplates)), [recentTemplates]);
@@ -956,7 +1003,7 @@ export const App: React.FC = () => {
         <div className="brand-block">
           {/* eslint-disable-next-line @remotion/warn-native-media-tag -- editor chrome only, excluded from video renders */}
           <img className="brand-mark" src={motionerIcon} alt="" />
-          <div><div className="brand-name">Motioner</div><div className="brand-version">1.3 · {project.editorMode === "template" ? "快速制作" : "专业制作"}</div></div>
+          <div className="brand-name">Motioner</div>
         </div>
         <div className="editor-mode-switch" role="tablist" aria-label="编辑模式">
           <button type="button" role="tab" aria-selected={project.editorMode === "template"} aria-controls="motioner-workbench" className={project.editorMode === "template" ? "active" : ""} title="模板：快速制作动效" onClick={() => project.editorMode !== "template" && markChanged({...project, editorMode: "template"})}>模板</button>
@@ -973,8 +1020,24 @@ export const App: React.FC = () => {
           <button type="button" className={`icon-btn toolbar-shortcut-button ${shortcutSettingsOpen ? "active" : ""}`} onClick={() => setShortcutSettingsOpen((open) => !open)} title="键盘快捷键设置" aria-label="键盘快捷键设置" aria-expanded={shortcutSettingsOpen}><Keyboard /></button>
           <ShortcutSettings open={shortcutSettingsOpen} bindings={shortcutBindings} onClose={() => setShortcutSettingsOpen(false)} onChange={setShortcutBindings} />
         </div>
-        <div className="project-identity" title={projectPath ?? "尚未保存为项目文件"}>
-          <strong>{project.name}</strong><span className={`save-indicator save-${saveState}`} aria-hidden="true" /><span>{getProjectFileName(projectPath)}</span>
+        <div className="project-identity">
+          {renamingProject ? <input
+            ref={projectNameInputRef}
+            className="project-name-input"
+            aria-label="项目名称"
+            value={projectNameDraft}
+            maxLength={96}
+            onChange={(event) => setProjectNameDraft(event.target.value)}
+            onBlur={commitProjectRename}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") event.currentTarget.blur();
+              if (event.key === "Escape") {
+                event.preventDefault();
+                cancelProjectRename();
+              }
+            }}
+          /> : <button type="button" className="project-name-button" onClick={beginProjectRename} title="重命名项目" aria-label={`重命名项目，当前名称 ${project.name}`}><strong>{project.name}</strong><Pencil aria-hidden="true" /></button>}
+          <span className={`save-indicator save-${saveState}`} aria-hidden="true" /><span>{getProjectFileName(projectPath)}</span>
         </div>
         <OutputQuickSettings
           width={project.canvas.width}
@@ -987,7 +1050,7 @@ export const App: React.FC = () => {
           onDurationChange={(seconds) => updateCanvas({durationInFrames: secondsToFrames(seconds, project.canvas.fps)})}
           onExportPresetChange={(presetId) => markChanged({...project, exportPresetId: presetId})}
         />
-        <button type="button" className="export-button" title={renderError ?? selectedExportPreset.description} onClick={() => void startRender()} disabled={!canRender}>
+        <button type="button" className="export-button" title={renderError ?? selectedExportPreset.description} aria-label={`导出 ${selectedExportPreset.shortLabel}`} onClick={() => void startRender()} disabled={!canRender}>
           {activeJobCount > 0 ? `加入队列 · ${selectedExportPreset.shortLabel}` : segmentedExportEnabled ? `分段导出 · ${selectedExportPreset.shortLabel}` : `导出 · ${selectedExportPreset.shortLabel}`}
         </button>
       </header>
@@ -1048,7 +1111,7 @@ export const App: React.FC = () => {
             <label className="template-scrubber" style={{"--preview-progress": `${currentFrame / Math.max(1, project.canvas.durationInFrames - 1) * 100}%`} as React.CSSProperties}>
               <span className="sr-only">预览播放头</span>
               <span className={`timeline-track mode-${manifest.durationMode}`} aria-hidden="true"><span className="timeline-intro" /><span className="timeline-hold" /><span className="timeline-outro" /><i /></span>
-              <input type="range" min={0} max={project.canvas.durationInFrames - 1} value={currentFrame} aria-valuetext={formatTimecode(currentFrame, project.canvas.fps)} onPointerDown={beginTimelineScrub} onChange={(event) => seekTimelineFrame(event.target.valueAsNumber)} onPointerUp={endTimelineScrub} onPointerCancel={endTimelineScrub} />
+              <input type="range" min={0} max={project.canvas.durationInFrames - 1} value={currentFrame} aria-valuetext={formatTimecode(currentFrame, project.canvas.fps)} data-tooltip="双击回到首帧" onDoubleClick={() => seekTimelineFrame(0)} onPointerDown={beginTimelineScrub} onChange={(event) => seekTimelineFrame(event.target.valueAsNumber)} onPointerUp={endTimelineScrub} onPointerCancel={endTimelineScrub} />
             </label>
             <span className="template-timecode template-timecode-end">{formatTimecode(project.canvas.durationInFrames - 1, project.canvas.fps)}</span>
             <span className="template-frame-count">{currentFrame + 1} / {project.canvas.durationInFrames} 帧</span>
@@ -1100,6 +1163,8 @@ export const App: React.FC = () => {
       {recovery && <section className="recovery-banner" aria-live="polite"><div><strong>发现自动恢复项目</strong><span>{recovery.project.name} · {new Date(recovery.savedAt).toLocaleString("zh-CN")}</span></div><div className="recovery-actions"><button type="button" className="icon-btn" onClick={() => void discardRecovery()} title="忽略并清除恢复项目" aria-label="忽略"><X /></button><button type="button" className="recovery-primary" onClick={() => void restoreRecovery()}>恢复</button></div></section>}
       {projectError && <section className="project-error" aria-live="assertive"><div><strong>项目操作失败</strong><span>{projectError}</span></div><button type="button" className="icon-btn" onClick={() => setProjectError(null)} title="关闭提示" aria-label="关闭"><X /></button></section>}
       <RenderQueuePanel jobs={renderJobs} onClear={() => setRenderJobs((current) => current.filter((job) => job.status === "queued" || job.status === "rendering"))} onRetry={(job) => void startRender(job.project)} />
+      <CloseProjectDialog open={closeDialogOpen} projectName={project.name} onDecision={resolveProjectCloseDecision} />
+      <GlobalTooltip />
     </div>
   );
 };
