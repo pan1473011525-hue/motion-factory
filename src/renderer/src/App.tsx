@@ -936,7 +936,11 @@ export const App: React.FC = () => {
         <div className="brand-block">
           {/* eslint-disable-next-line @remotion/warn-native-media-tag -- editor chrome only, excluded from video renders */}
           <img className="brand-mark" src={motionerIcon} alt="" />
-          <div><div className="brand-name">Motioner</div><div className="brand-version">1.3 · Composer</div></div>
+          <div><div className="brand-name">Motioner</div><div className="brand-version">1.3 · {project.editorMode === "template" ? "快速制作" : "专业制作"}</div></div>
+        </div>
+        <div className="editor-mode-switch" role="tablist" aria-label="编辑模式">
+          <button type="button" role="tab" aria-selected={project.editorMode === "template"} aria-controls="motioner-workbench" className={project.editorMode === "template" ? "active" : ""} title="模板：快速制作动效" onClick={() => project.editorMode !== "template" && markChanged({...project, editorMode: "template"})}>模板</button>
+          <button type="button" role="tab" aria-selected={project.editorMode === "composer"} aria-controls="motioner-workbench" className={project.editorMode === "composer" ? "active" : ""} title="自由编排：专业动效制作" onClick={enterComposerMode}>自由编排</button>
         </div>
         <div className="file-actions" aria-label="项目文件操作">
           <button type="button" className="icon-btn" onClick={newProject} title="新建项目" aria-label="新建项目"><FilePlus /></button>
@@ -944,10 +948,6 @@ export const App: React.FC = () => {
           <button type="button" className="icon-btn" onClick={() => void saveProject(false)} title="保存项目" aria-label="保存项目"><Save /></button>
           <button type="button" className="icon-btn" onClick={undoProject} disabled={undoStack.length === 0} title="撤销" aria-label="撤销"><Undo2 /></button>
           <button type="button" className="icon-btn" onClick={redoProject} disabled={redoStack.length === 0} title="重做" aria-label="重做"><Redo2 /></button>
-        </div>
-        <div className="editor-mode-switch" aria-label="编辑模式">
-          <button type="button" className={project.editorMode === "template" ? "active" : ""} onClick={() => project.editorMode !== "template" && markChanged({...project, editorMode: "template"})}>模板</button>
-          <button type="button" className={project.editorMode === "composer" ? "active" : ""} onClick={enterComposerMode}>自由编排</button>
         </div>
         <div className="project-identity" title={projectPath ?? "尚未保存为项目文件"}>
           <strong>{project.name}</strong><span className={`save-indicator save-${saveState}`} aria-hidden="true" /><span>{getProjectFileName(projectPath)}</span>
@@ -968,14 +968,14 @@ export const App: React.FC = () => {
         </button>
       </header>
 
-      <main className="workbench">
+      <main id="motioner-workbench" className={`workbench workbench-${project.editorMode}`}>
         {project.editorMode === "template"
           ? <TemplateLibrary selected={manifest} favorites={favorites} recentTemplates={recentTemplates} onSelect={selectTemplate} onToggleFavorite={(templateId) => setFavorites((current) => current.includes(templateId) ? current.filter((id) => id !== templateId) : [...current, templateId])} />
           : <ComponentLibrary selectedNode={selectedNode} onAdd={addComposerComponent} onApplyMotion={applyMotionPreset} />}
 
         <section className={`canvas-panel ${project.editorMode === "composer" ? "composer-mode" : ""}`} aria-label="预览画布">
           <div className="canvas-toolbar">
-            <div><h1>{project.editorMode === "composer" ? "自由编排画布" : manifest.name}</h1><p>{project.editorMode === "composer" ? `${project.composition.nodes.length} 个图层 · 拖动定位，控制点缩放` : manifest.description}</p></div>
+            <div className="canvas-toolbar-copy"><h1>{project.editorMode === "composer" ? "自由编排画布" : "模板预览"}</h1><p>{project.editorMode === "composer" ? `${project.composition.nodes.length} 个图层 · 拖动定位，控制点缩放` : `${manifest.name} · ${manifest.description}`}</p></div>
             <div className="canvas-actions">
               {project.editorMode === "composer" && <button type="button" className={`transport-toggle ${isPlaying ? "active" : ""}`} onClick={togglePlayback} title="播放 / 暂停（空格）">{isPlaying ? <Pause /> : <Play />}{isPlaying ? "暂停" : "播放"}<kbd>Space</kbd></button>}
               <button type="button" className="icon-btn" onClick={() => playerRef.current?.seekTo(Math.max(0, currentFrame - 1))} title="上一帧" aria-label="上一帧"><ChevronLeft /></button>
@@ -1030,7 +1030,7 @@ export const App: React.FC = () => {
         </section>
 
         <aside className="inspector-panel" aria-label="参数检查器">
-          <div className="panel-heading inspector-title"><div><h2>{project.editorMode === "composer" ? selectedNode?.name ?? "Composer" : manifest.name}</h2><p>{project.editorMode === "composer" ? selectedNode ? `${getTemplateManifest(project.template.id).name} · ${selectedNode.componentId}` : "选择图层后编辑属性" : `${manifest.durationMode} · v${manifest.version}`}</p></div><span className="alpha-badge">{project.editorMode === "composer" ? "NODE" : "ALPHA"}</span></div>
+          <div className="panel-heading inspector-title"><div><h2>{project.editorMode === "composer" ? selectedNode?.name ?? "图层属性" : "模板参数"}</h2><p>{project.editorMode === "composer" ? selectedNode ? `${getTemplateManifest(project.template.id).name} · ${selectedNode.componentId}` : "选择图层后编辑属性" : `${manifest.name} · ${manifest.durationMode} · v${manifest.version}`}</p></div><span className="alpha-badge">{project.editorMode === "composer" ? "图层" : "模板"}</span></div>
           {project.editorMode === "template"
             ? <Inspector manifest={manifest} props={project.props} assets={project.assets} onChange={updateProp} onPickMedia={pickMedia} />
             : <><ComposerInspector node={selectedNode} assets={project.assets} projectDurationInFrames={project.canvas.durationInFrames} onChange={updateSelectedNode} onPickMedia={pickComposerMedia} /><section className="inspector-section scene-editor"><h3>场景</h3><label className="field"><span>背景</span><select value={project.composition.backgroundColor === "transparent" ? "transparent" : "solid"} onChange={(event) => commitComposition({...project.composition, backgroundColor: event.target.value === "transparent" ? "transparent" : "#0B0E12"})}><option value="transparent">透明</option><option value="solid">纯色</option></select></label>{project.composition.backgroundColor !== "transparent" && <label className="field"><span>背景颜色</span><div className="color-control"><input type="color" value={project.composition.backgroundColor} onChange={(event) => commitComposition({...project.composition, backgroundColor: event.target.value})} /><input value={project.composition.backgroundColor.toUpperCase()} onChange={(event) => commitComposition({...project.composition, backgroundColor: event.target.value})} /></div></label>}<label className="field inline-switch"><span>对齐网格</span><input className="switch-control" type="checkbox" checked={project.composition.snapToGrid} onChange={(event) => commitComposition({...project.composition, snapToGrid: event.target.checked})} /></label><label className="field"><span>网格间距</span><select value={project.composition.gridSize} onChange={(event) => commitComposition({...project.composition, gridSize: Number(event.target.value)})}><option value={0.01}>1%</option><option value={0.025}>2.5%</option><option value={0.05}>5%</option><option value={0.1}>10%</option></select></label></section></>}

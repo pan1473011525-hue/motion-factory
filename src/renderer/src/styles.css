@@ -71,7 +71,7 @@ input:disabled {
   grid-template-rows: 58px minmax(0, 1fr) 32px;
   width: 100%;
   height: 100%;
-  min-width: 1024px;
+  min-width: 1280px;
   background: var(--bg);
 }
 
@@ -327,26 +327,27 @@ input:disabled {
   flex: 0 0 auto;
   padding: 2px;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 999px;
   background: var(--bg);
   -webkit-app-region: no-drag;
 }
 
 .editor-mode-switch button {
-  height: 26px;
-  padding: 0 10px;
+  height: 28px;
+  padding: 0 12px;
   border: 0;
-  border-radius: 5px;
+  border-radius: 999px;
   color: var(--quiet);
   background: transparent;
-  font-size: 10px;
+  font-size: 11px;
+  font-weight: 560;
   white-space: nowrap;
   cursor: pointer;
 }
 
 .editor-mode-switch button.active {
   color: var(--ink);
-  background: var(--surface-3);
+  background: var(--primary);
 }
 
 .editor-mode-switch button:active {
@@ -418,20 +419,27 @@ input:disabled {
 }
 
 .workbench {
+  --resource-pane-width: clamp(248px, 20vw, 320px);
+  --inspector-pane-width: clamp(304px, 25vw, 380px);
   display: grid;
-  grid-template-columns: 292px minmax(0, 1fr) 350px;
+  grid-template-columns: var(--resource-pane-width) minmax(0, 1fr) var(--inspector-pane-width);
   min-height: 0;
+  overflow: hidden;
 }
 
 .template-panel,
 .inspector-panel,
 .canvas-panel {
+  min-width: 0;
   min-height: 0;
 }
 
 .template-panel,
 .inspector-panel {
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
   background: var(--surface-1);
 }
 
@@ -874,21 +882,35 @@ input:disabled {
 
 .canvas-panel {
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-rows: 58px minmax(0, 1fr) 54px;
+  overflow: hidden;
   background: var(--bg);
   position: relative;
 }
 
 .canvas-panel.composer-mode {
-  grid-template-rows: auto minmax(190px, 1fr) 236px;
+  grid-template-rows: 58px minmax(190px, 1fr) 236px;
 }
 
 .canvas-toolbar {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(140px, 1fr) minmax(0, auto);
   align-items: center;
-  justify-content: space-between;
-  padding: 15px 20px;
+  gap: 16px;
+  min-width: 0;
+  padding: 10px 16px;
   border-bottom: 1px solid var(--line);
+}
+
+.canvas-toolbar-copy {
+  min-width: 0;
+}
+
+.canvas-toolbar-copy h1,
+.canvas-toolbar-copy p {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .canvas-toolbar p,
@@ -945,7 +967,7 @@ input:disabled {
   display: grid;
   place-items: center;
   min-height: 0;
-  padding: 28px;
+  padding: 20px;
   background: oklch(0.125 0 0);
   /* 以 stage-wrap 作为尺寸容器：player-frame 用 100cqw / 100cqh 做 contain 排布，
      横屏竖屏都恒定在预览区域内展示，不溢出、不遮挡其他 UI、不变形。 */
@@ -1002,7 +1024,8 @@ input:disabled {
   grid-template-columns: auto auto minmax(120px, 1fr) auto auto;
   align-items: center;
   gap: 14px;
-  padding: 12px 20px;
+  min-height: 54px;
+  padding: 10px 16px;
   border-top: 1px solid var(--line);
   color: var(--quiet);
   font-family: "SF Mono", ui-monospace, monospace;
@@ -1063,6 +1086,18 @@ input:disabled {
   display: flex;
   align-items: center;
   gap: 6px;
+  min-width: 0;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+
+.canvas-actions::-webkit-scrollbar {
+  display: none;
+}
+
+.canvas-actions > * {
+  flex: 0 0 auto;
 }
 
 .canvas-actions select {
@@ -1164,7 +1199,7 @@ input:disabled {
 
 .timeline-toolbar {
   display: grid;
-  grid-template-columns: 160px minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: 10px;
   min-height: 42px;
@@ -1176,6 +1211,7 @@ input:disabled {
   display: flex;
   align-items: center;
   gap: 7px;
+  white-space: nowrap;
 }
 
 .timeline-transport .timeline-play-toggle {
@@ -1223,6 +1259,13 @@ input:disabled {
 .timeline-layer-actions {
   display: flex;
   gap: 4px;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.timeline-layer-actions::-webkit-scrollbar {
+  display: none;
 }
 
 .timeline-layer-actions button {
@@ -1615,7 +1658,14 @@ input:disabled {
 }
 
 .inspector-title {
-  padding: 18px 16px 2px;
+  position: sticky;
+  z-index: 3;
+  top: 0;
+  min-height: 58px;
+  margin-bottom: 0;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface-1);
 }
 
 .inspector-section {
@@ -2219,16 +2269,6 @@ input:disabled {
   }
 }
 
-@media (max-width: 1160px) {
-  .project-identity {
-    display: none;
-  }
-
-  .workbench {
-    grid-template-columns: 260px minmax(0, 1fr) 320px;
-  }
-}
-
 .recovery-banner,
 .project-error {
   position: fixed;
@@ -2490,10 +2530,6 @@ input:disabled {
 }
 
 @media (max-width: 1240px) {
-  .workbench {
-    grid-template-columns: 252px minmax(0, 1fr) 310px;
-  }
-
   .project-identity {
     max-width: 132px;
   }

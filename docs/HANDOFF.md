@@ -64,14 +64,22 @@
 - 时间线橙色分段点可拖拽调整,Alt 临时取消吸附;限制在首末帧之间并拒绝重合。缩短项目时长会同步收拢/去重分段点。
 - 验证:`pnpm check` 22 文件/61 测试;`test:exports` 实际导出 3 段 H.264;`package:dmg` 内的打包应用 E2E 实际导出 3 段/75 帧并核验清单;`hdiutil verify` 通过。
 
+### 9. UI 重构阶段一：布局架构优化(2026-08-11)
+- 新增 `docs/当前UI架构分析.md`,梳理 Renderer 入口、两种模式组件、状态/样式管理、时间线、检查器和施工风险。
+- 顶部模式切换提升到品牌后的全局导航位,改为常驻胶囊 Tab 和明确当前态;品牌副标题同步标识「快速制作 / 专业制作」。
+- 三栏改为受约束比例布局:1440px 窗口实测 288/792/360px(20%/55%/25%),1280px 最小窗口实测 256/704/320px,无页面横向溢出。
+- 模板时间线固定 54px,Composer 时间线固定 236px;画布工具栏单行稳定,控制项过多时仅在局部滚动;检查器标题固定、内容独立滚动。
+- 新增 `docs/阶段一完成报告.md` 与两种模式 1440×900 截图。阶段二/三未开始,等待用户确认。
+- 验证:`pnpm check` 22 文件/61 测试;`test:exports` 五类真实输出全通过;`package:dmg` + 包内完整性 + 打包应用 3 段 E2E + `hdiutil verify` 全通过。
+
 ---
 
 ## 三、当前项目状态
 
 - **版本**:1.3.1(应用版本号未随功能递增;如需发版请先更新 `package.json` version 与 README)。
 - **测试**:`pnpm check` 全绿 —— 22 个测试文件 / 61 项测试(lint + tsc + vitest)。
-- **构建产物**:`release/Motioner-1.3.1-arm64.dmg`(274,275,363 bytes,约 261.6 MiB)+ `Motioner-integrity.json` + `SHA256SUMS.txt`;当前 DMG SHA256:`993e517f4703ce864c140393fd2af88de165d1a21fcf3dd77185ac040b676bf9`。
-- **Git**:方向 9 后续实现见最新提交;`docs/CODEX_HANDOFF_PROMPT.md`、`docs/design-reference/`、`docs/ui-redesign-plan.md` 为本轮开始前已存在的未跟踪用户资料,未纳入提交。
+- **构建产物**:`release/Motioner-1.3.1-arm64.dmg`(274,275,713 bytes,约 261.6 MiB)+ `Motioner-integrity.json` + `SHA256SUMS.txt`;当前 DMG SHA256:`8ee1e7d2cd8dbd50b79916194a068db06ae0e6d53d64ec070b3107188048068d`。
+- **Git**:方向 9 与 UI 重构阶段一均已实现;`docs/CODEX_HANDOFF_PROMPT.md`、`docs/design-reference/`、`docs/ui-redesign-plan.md` 为本轮开始前已存在的未跟踪用户资料,未纳入提交。
 - **新增依赖**:`@remotion/media`、`@remotion/media-utils`、`@remotion/animation-utils`(均 4.0.507)、`lucide-react`(1.30.0),均已入 `package.json` 与 lock。
 
 ---
@@ -133,3 +141,4 @@ pnpm package:dmg      # 完整打包:build + electron-builder + verify + package
 - 2026-08-10:创建本文档。记录 Reasonix 接手 codex 之后(依赖恢复 → 打包交付 → 交互修复 → 十方向路线图 → 多轮打包与回归修复)的全部工作、当前状态与待办。
 - 2026-08-10:追加记录——界面按钮 lucide 图标化(提交 `fd86c51`),新增 `lucide-react` 依赖;DMG 挂载内容验证纳入交付检查清单。
 - 2026-08-11:完成方向 9 后续——多文件分段导出、分段点拖拽、逐段真实媒体校验、`sections.json` 单测与打包应用 E2E;重新交付 v1.3.1 DMG 并更新 SHA256。
+- 2026-08-11:完成 UI 重构阶段一——常驻胶囊模式导航、稳定三栏比例、固定时间线、侧栏独立滚动、两模式截图与完成报告;重新打包 v1.3.1 DMG 并更新 SHA256。阶段二等待确认。
