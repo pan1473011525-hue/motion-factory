@@ -8,6 +8,7 @@ import type {AnyTemplateManifest} from "../../templates/catalog";
 import {useRef, useState} from "react";
 import {ArrowDown, ArrowUp, X} from "lucide-react";
 import {parseCsv} from "./csv";
+import {InspectorGroup} from "./InspectorGroup";
 
 const sectionLabels: Record<InspectorSection, string> = {
   content: "内容",
@@ -22,9 +23,9 @@ const orderedSections: InspectorSection[] = [
   "content",
   "data",
   "source",
+  "layout",
   "style",
   "animation",
-  "layout",
 ];
 
 type InspectorProps = {
@@ -202,8 +203,7 @@ export const Inspector: React.FC<InspectorProps> = ({
       const fields = manifest.fields.filter((field) => field.section === section);
       if (fields.length === 0) return null;
       return (
-        <section className="inspector-section" key={section}>
-          <h3>{sectionLabels[section]}</h3>
+        <InspectorGroup title={sectionLabels[section]} defaultOpen={section === "content"} key={section}>
           {fields.map((field) => (
             <label className={`field field-${field.control}`} key={field.key}>
               <span>{field.label}</span>
@@ -217,7 +217,7 @@ export const Inspector: React.FC<InspectorProps> = ({
               {field.help && <small className="field-help">{field.help}</small>}
             </label>
           ))}
-        </section>
+        </InspectorGroup>
       );
     })}
   </>

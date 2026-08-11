@@ -7,6 +7,7 @@ import type {InspectorField, InspectorSection} from "../../../packages/template-
 import {Eye, EyeOff, Lock, LockOpen} from "lucide-react";
 import {getComposerComponent, motionPresets} from "../../composer/registry";
 import {FieldControl} from "./Inspector";
+import {InspectorGroup} from "./InspectorGroup";
 
 const sectionLabels: Record<InspectorSection, string> = {
   content: "内容",
@@ -17,7 +18,7 @@ const sectionLabels: Record<InspectorSection, string> = {
   layout: "布局",
 };
 
-const orderedSections: InspectorSection[] = ["content", "data", "source", "style", "animation", "layout"];
+const orderedSections: InspectorSection[] = ["content", "data", "source", "layout", "style", "animation"];
 const clamp = (value: number, minimum: number, maximum: number): number => Math.min(maximum, Math.max(minimum, value));
 const percent = (value: number): number => Number((value * 100).toFixed(2));
 
@@ -43,29 +44,26 @@ export const ComposerInspector: React.FC<{
   const updateProp = (key: string, value: unknown): void => onChange({...node, props: {...node.props, [key]: value}});
 
   return <>
-    <section className="inspector-section node-identity-editor">
+    <InspectorGroup title="图层" defaultOpen className="node-identity-editor">
       <label className="field"><span>图层名称</span><input value={node.name} maxLength={96} onChange={(event) => onChange({...node, name: event.target.value || definition.name})} /></label>
       <div className="node-state-actions"><button type="button" className={`icon-btn ${node.hidden ? "active" : ""}`} onClick={() => onChange({...node, hidden: !node.hidden})} title={node.hidden ? "显示图层" : "隐藏图层"}>{node.hidden ? <EyeOff /> : <Eye />}{node.hidden ? "已隐藏" : "可见"}</button><button type="button" className={`icon-btn ${node.locked ? "active" : ""}`} onClick={() => onChange({...node, locked: !node.locked})} title={node.locked ? "解锁图层" : "锁定图层"}>{node.locked ? <Lock /> : <LockOpen />}{node.locked ? "已锁定" : "可编辑"}</button></div>
-    </section>
-    <section className="inspector-section transform-editor">
-      <h3>变换</h3>
+    </InspectorGroup>
+    <InspectorGroup title="变换" defaultOpen className="transform-editor">
       <div className="field-row"><label className="field field-grow"><span>X %</span><input type="number" step={0.1} value={percent(node.transform.x)} onChange={(event) => updateTransform({x: clamp((event.target.valueAsNumber || 0) / 100, -2, 3)})} /></label><label className="field field-grow"><span>Y %</span><input type="number" step={0.1} value={percent(node.transform.y)} onChange={(event) => updateTransform({y: clamp((event.target.valueAsNumber || 0) / 100, -2, 3)})} /></label></div>
       <div className="field-row"><label className="field field-grow"><span>宽度 %</span><input type="number" min={1} max={300} step={0.1} value={percent(node.transform.width)} onChange={(event) => updateTransform({width: clamp((event.target.valueAsNumber || 1) / 100, 0.01, 3)})} /></label><label className="field field-grow"><span>高度 %</span><input type="number" min={1} max={300} step={0.1} value={percent(node.transform.height)} onChange={(event) => updateTransform({height: clamp((event.target.valueAsNumber || 1) / 100, 0.01, 3)})} /></label></div>
       <div className="field-row"><label className="field field-grow"><span>旋转</span><input type="number" step={0.5} value={node.transform.rotation} onChange={(event) => updateTransform({rotation: event.target.valueAsNumber || 0})} /></label><label className="field field-grow"><span>透明度 %</span><input type="number" min={0} max={100} step={1} value={Math.round(node.transform.opacity * 100)} onChange={(event) => updateTransform({opacity: clamp((event.target.valueAsNumber || 0) / 100, 0, 1)})} /></label></div>
-    </section>
-    {node.componentId === "template" && <section className="inspector-section template-node-summary"><h3>模板快照</h3><dl><div><dt>模板</dt><dd>{String(node.props.templateId ?? "")}</dd></div><div><dt>参数</dt><dd>{Object.keys((node.props.templateProps as Record<string, unknown>) ?? {}).length} 项</dd></div></dl><small className="field-help">模板在转换时被冻结为参数快照。可继续移动、缩放、定时和添加动效。</small></section>}
+    </InspectorGroup>
+    {node.componentId === "template" && <InspectorGroup title="模板快照" className="template-node-summary"><dl><div><dt>模板</dt><dd>{String(node.props.templateId ?? "")}</dd></div><div><dt>参数</dt><dd>{Object.keys((node.props.templateProps as Record<string, unknown>) ?? {}).length} 项</dd></div></dl><small className="field-help">模板在转换时被冻结为参数快照。可继续移动、缩放、定时和添加动效。</small></InspectorGroup>}
     {orderedSections.map((section) => {
       const fields = definition.fields.filter((field) => field.section === section);
       if (fields.length === 0) return null;
-      return <section className="inspector-section" key={section}><h3>{sectionLabels[section]}</h3>{fields.map((field) => <label className={`field field-${field.control}`} key={field.key}><span>{field.label}</span><FieldControl field={field} value={node.props[field.key]} assets={assets} onChange={(value) => updateProp(field.key, value)} onPickMedia={() => onPickMedia(field as Extract<InspectorField, {control: "media"}>)} />{field.help && <small className="field-help">{field.help}</small>}</label>)}</section>;
+      return <InspectorGroup title={sectionLabels[section]} key={section}>{fields.map((field) => <label className={`field field-${field.control}`} key={field.key}><span>{field.label}</span><FieldControl field={field} value={node.props[field.key]} assets={assets} onChange={(value) => updateProp(field.key, value)} onPickMedia={() => onPickMedia(field as Extract<InspectorField, {control: "media"}>)} />{field.help && <small className="field-help">{field.help}</small>}</label>)}</InspectorGroup>;
     })}
-    <section className="inspector-section timing-editor">
-      <h3>时间</h3>
+    <InspectorGroup title="时间" className="timing-editor">
       <div className="field-row"><label className="field field-grow"><span>开始帧</span><input type="number" min={0} max={projectDurationInFrames - 1} value={node.timing.from} onChange={(event) => {const from = clamp(event.target.valueAsNumber || 0, 0, projectDurationInFrames - 1); updateTiming({from, durationInFrames: Math.min(node.timing.durationInFrames, projectDurationInFrames - from)});}} /></label><label className="field field-grow"><span>持续帧</span><input type="number" min={1} max={projectDurationInFrames - node.timing.from} value={node.timing.durationInFrames} onChange={(event) => updateTiming({durationInFrames: clamp(event.target.valueAsNumber || 1, 1, projectDurationInFrames - node.timing.from)})} /></label></div>
       <small className="field-help">结束于第 {node.timing.from + node.timing.durationInFrames - 1} 帧</small>
-    </section>
-    <section className="inspector-section node-motion-editor">
-      <h3>图层动效</h3>
+    </InspectorGroup>
+    <InspectorGroup title="动画" className="node-motion-editor">
       <MotionSelect label="入场" phase="enter" value={node.motion.enter} onChange={(enter) => updateMotion({enter})} />
       <label className="field"><span>入场帧数</span><input type="number" min={1} max={Math.max(1, node.timing.durationInFrames)} value={node.motion.enterDuration} onChange={(event) => updateMotion({enterDuration: clamp(event.target.valueAsNumber || 1, 1, Math.max(1, node.timing.durationInFrames))})} /></label>
       <MotionSelect label="退场" phase="exit" value={node.motion.exit} onChange={(exit) => updateMotion({exit})} />
@@ -75,6 +73,6 @@ export const ComposerInspector: React.FC<{
       <label className="field"><span>入场强度</span><input type="range" min={0} max={1} step={0.05} value={node.motion.mix?.enter ?? 1} onChange={(event) => updateMotion({mix: {...(node.motion.mix ?? {enter: 1, exit: 1, loop: 1}), enter: event.target.valueAsNumber}})} /><small className="field-help">{((node.motion.mix?.enter ?? 1) * 100).toFixed(0)}%</small></label>
       <label className="field"><span>退场强度</span><input type="range" min={0} max={1} step={0.05} value={node.motion.mix?.exit ?? 1} onChange={(event) => updateMotion({mix: {...(node.motion.mix ?? {enter: 1, exit: 1, loop: 1}), exit: event.target.valueAsNumber}})} /><small className="field-help">{((node.motion.mix?.exit ?? 1) * 100).toFixed(0)}%</small></label>
       <label className="field"><span>持续强度</span><input type="range" min={0} max={1} step={0.05} value={node.motion.mix?.loop ?? 1} onChange={(event) => updateMotion({mix: {...(node.motion.mix ?? {enter: 1, exit: 1, loop: 1}), loop: event.target.valueAsNumber}})} /><small className="field-help">{((node.motion.mix?.loop ?? 1) * 100).toFixed(0)}%</small></label>
-    </section>
+    </InspectorGroup>
   </>;
 };

@@ -72,14 +72,22 @@
 - 新增 `docs/阶段一完成报告.md` 与两种模式 1440×900 截图。阶段二/三未开始,等待用户确认。
 - 验证:`pnpm check` 22 文件/61 测试;`test:exports` 五类真实输出全通过;`package:dmg` + 包内完整性 + 打包应用 3 段 E2E + `hdiutil verify` 全通过。
 
+### 10. UI 重构阶段二：视觉系统优化(2026-08-11)
+- 按设计计划建立精确视觉 token:背景 `#111418`、面板 `#171B22`、边框 `#252B35`、强调 `#409EFF`,补充表面/文字/语义色与统一圆角、状态过渡。
+- 模板库保持两列卡片,每张卡片明确展示缩略图、名称、类型与最低时长;卡片/组件/动效使用克制边框和表面层级,不使用装饰性阴影。
+- 新增复用 `InspectorGroup`,模板 manifest 字段、Composer 节点属性和 App 项目级设置全部改为可折叠分组;默认只展开高频内容/图层/变换,点击分组不会触发节点取消选中竞态。
+- 渲染队列浮层移除大阴影;进度条由 `width` 动画改为合成层 `scale` 动画。Impeccable UI 反模式检测为 0 项。
+- 新增 `docs/阶段二完成报告.md` 与两种模式 1440×900 截图。阶段三未开始,等待用户确认。
+- 验证:`pnpm check` 22 文件/61 测试;1440×900 与 1280×760 无页面横向溢出;文字/强调色对比度全部达到 WCAG AA;`test:exports`、`package:dmg`、包内完整性、打包应用 3 段 E2E 与 `hdiutil verify` 全通过。
+
 ---
 
 ## 三、当前项目状态
 
 - **版本**:1.3.1(应用版本号未随功能递增;如需发版请先更新 `package.json` version 与 README)。
 - **测试**:`pnpm check` 全绿 —— 22 个测试文件 / 61 项测试(lint + tsc + vitest)。
-- **构建产物**:`release/Motioner-1.3.1-arm64.dmg`(274,275,713 bytes,约 261.6 MiB)+ `Motioner-integrity.json` + `SHA256SUMS.txt`;当前 DMG SHA256:`8ee1e7d2cd8dbd50b79916194a068db06ae0e6d53d64ec070b3107188048068d`。
-- **Git**:方向 9 与 UI 重构阶段一均已实现;`docs/CODEX_HANDOFF_PROMPT.md`、`docs/design-reference/`、`docs/ui-redesign-plan.md` 为本轮开始前已存在的未跟踪用户资料,未纳入提交。
+- **构建产物**:`release/Motioner-1.3.1-arm64.dmg`(274,272,646 bytes,约 261.6 MiB)+ `Motioner-integrity.json` + `SHA256SUMS.txt`;当前 DMG SHA256:`eb9ff8e2d54f4d9088d04f1796c133a3468103a5a5d050df8c3c09ecf9c9d323`。
+- **Git**:方向 9 与 UI 重构阶段一/二均已实现;`docs/CODEX_HANDOFF_PROMPT.md`、`docs/design-reference/`、`docs/ui-redesign-plan.md` 为本轮开始前已存在的未跟踪用户资料,未纳入提交。
 - **新增依赖**:`@remotion/media`、`@remotion/media-utils`、`@remotion/animation-utils`(均 4.0.507)、`lucide-react`(1.30.0),均已入 `package.json` 与 lock。
 
 ---
@@ -142,3 +150,4 @@ pnpm package:dmg      # 完整打包:build + electron-builder + verify + package
 - 2026-08-10:追加记录——界面按钮 lucide 图标化(提交 `fd86c51`),新增 `lucide-react` 依赖;DMG 挂载内容验证纳入交付检查清单。
 - 2026-08-11:完成方向 9 后续——多文件分段导出、分段点拖拽、逐段真实媒体校验、`sections.json` 单测与打包应用 E2E;重新交付 v1.3.1 DMG 并更新 SHA256。
 - 2026-08-11:完成 UI 重构阶段一——常驻胶囊模式导航、稳定三栏比例、固定时间线、侧栏独立滚动、两模式截图与完成报告;重新打包 v1.3.1 DMG 并更新 SHA256。阶段二等待确认。
+- 2026-08-11:完成 UI 重构阶段二——精确视觉 token、统一控件与卡片、模板卡片类型/时长、全检查器折叠分组、对比度和最小窗口验证;重新打包 v1.3.1 DMG 并更新 SHA256。阶段三等待确认。
