@@ -70,6 +70,22 @@ describe("motion project model", () => {
     });
   });
 
+  it("adds a backwards-compatible original template appearance", () => {
+    const json = JSON.parse(serializeMotionProject(createFixture())) as Record<string, unknown>;
+    delete json.templateAppearance;
+    expect(parseMotionProjectJson(JSON.stringify(json)).templateAppearance).toEqual({
+      surfaceColor: null,
+      surfaceOpacity: 1,
+      surfaceTone: "auto",
+    });
+  });
+
+  it("persists a semi-transparent custom template surface", () => {
+    const project = createFixture();
+    project.templateAppearance = {surfaceColor: "#F2F3F5", surfaceOpacity: 0.5, surfaceTone: "auto"};
+    expect(parseMotionProjectJson(serializeMotionProject(project)).templateAppearance).toEqual(project.templateAppearance);
+  });
+
   it("migrates v1 projects into compatible template mode", () => {
     const json = JSON.parse(serializeMotionProject(createFixture())) as Record<string, unknown>;
     json.formatVersion = 1;

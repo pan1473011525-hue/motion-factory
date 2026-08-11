@@ -12,7 +12,6 @@ import type {StackedBarsProps} from "../templates/stacked-bars/manifest";
 import {
   AlphaSurface,
   EntranceExit,
-  getMotionTheme,
   GridLines,
   MediaSlot,
   SafeArea,
@@ -22,6 +21,7 @@ import {
   ThemeProvider,
   useCanvasUnit,
   useMotionTheme,
+  useResolvedMotionTheme,
 } from "./primitives";
 
 const AdvancedFrame: React.FC<{preset: string; accent: string; children: React.ReactNode; inset?: number}> = ({preset, accent, children, inset = 0.055}) => (
@@ -51,7 +51,7 @@ const Heading: React.FC<{children: string; style?: React.CSSProperties}> = ({chi
 };
 
 export const AlphaTestCard: React.FC<AlphaTestCardProps> = (props) => {
-  const theme = getMotionTheme(props.stylePreset, props.accentColor);
+  const theme = useResolvedMotionTheme(props.stylePreset, props.accentColor);
   const unit = useCanvasUnit();
   const {portrait} = useResponsiveCanvas();
   const cells = [25, 50, 75, 100];
@@ -60,7 +60,7 @@ export const AlphaTestCard: React.FC<AlphaTestCardProps> = (props) => {
 
 export const RouteMap: React.FC<RouteMapProps> = (props) => {
   const unit = useCanvasUnit();
-  const theme = getMotionTheme(props.stylePreset, props.accentColor);
+  const theme = useResolvedMotionTheme(props.stylePreset, props.accentColor);
   const draw = useDrawProgress(4, 72);
   const {portrait} = useResponsiveCanvas();
   const path = props.waypoints.map((item, index) => `${index === 0 ? "M" : "L"}${item.x * 10},${item.y * 6}`).join(" ");
@@ -71,7 +71,7 @@ const parseValues = (value: string): number[] => value.split(/[，,]/u).map((ite
 
 export const MultiLine: React.FC<MultiLineProps> = (props) => {
   const unit = useCanvasUnit();
-  const theme = getMotionTheme(props.stylePreset, props.accentColor);
+  const theme = useResolvedMotionTheme(props.stylePreset, props.accentColor);
   const draw = useDrawProgress();
   const labels = props.xLabels.split(/[，,]/u).map((item) => item.trim()).filter(Boolean);
   const values = props.series.flatMap((item) => parseValues(item.values));
@@ -83,7 +83,7 @@ export const MultiLine: React.FC<MultiLineProps> = (props) => {
 
 export const StackedBars: React.FC<StackedBarsProps> = (props) => {
   const unit = useCanvasUnit();
-  const theme = getMotionTheme(props.stylePreset, props.accentColor);
+  const theme = useResolvedMotionTheme(props.stylePreset, props.accentColor);
   const draw = useDrawProgress();
   const totals = props.items.map((item) => Math.max(0, item.first) + Math.max(0, item.second) + Math.max(0, item.third));
   const maximum = Math.max(1, ...totals);
@@ -97,13 +97,13 @@ export const NewsTitle: React.FC<NewsTitleProps> = (props) => {
   const {portrait} = useResponsiveCanvas();
   const chapter = props.layout === "chapter";
   const breaking = props.layout === "breaking";
-  const theme = getMotionTheme(props.stylePreset, breaking ? "#FF3B30" : props.accentColor);
+  const theme = useResolvedMotionTheme(props.stylePreset, breaking ? "#FF3B30" : props.accentColor);
   return <AdvancedFrame preset={props.stylePreset} accent={breaking ? "#FF3B30" : props.accentColor}><EntranceExit direction={chapter ? "up" : "left"} style={{position: "absolute", inset: chapter ? "18% 0" : portrait ? "18% 0 8%" : "auto 0 0"}}><Surface style={{height: "100%", minHeight: chapter ? undefined : 260 * unit, padding: `${42 * unit}px ${portrait ? 38 : 58} ${unit}px`, display: "flex", flexDirection: "column", justifyContent: "center", textAlign: chapter ? "center" : "left", borderTop: `${breaking ? 12 : 6} ${unit}px solid ${theme.accent}`}}><div style={{display: "flex", justifyContent: chapter ? "center" : "space-between", gap: 20 * unit, color: theme.accent, fontSize: 19 * unit, fontWeight: 760, letterSpacing: ".12em"}}><span>{breaking ? "BREAKING NEWS" : props.kicker.toUpperCase()}</span>{!chapter && <span style={{color: theme.muted, letterSpacing: ".02em"}}>{props.edition}</span>}</div><TextFit maxSize={chapter ? 72 : 60} minSize={34} maxCharacters={portrait ? 22 : 32} style={{marginTop: 20 * unit, fontWeight: 790, lineHeight: 1.12, letterSpacing: "-.035em"}}>{props.headline}</TextFit>{props.subheadline && <p style={{maxWidth: chapter ? "78%" : "88%", alignSelf: chapter ? "center" : undefined, margin: `${20 * unit}px 0 0`, fontSize: 24 * unit, color: theme.muted, lineHeight: 1.5}}>{props.subheadline}</p>}</Surface></EntranceExit></AdvancedFrame>;
 };
 
 export const SportsScoreboard: React.FC<SportsScoreboardProps> = (props) => {
   const unit = useCanvasUnit();
-  const theme = getMotionTheme(props.stylePreset, props.accentColor);
+  const theme = useResolvedMotionTheme(props.stylePreset, props.accentColor);
   const {portrait} = useResponsiveCanvas();
   const scoreSize = portrait ? 90 : 116;
   return <AdvancedFrame preset={props.stylePreset} accent={props.accentColor}><EntranceExit style={{position: "absolute", left: 0, right: 0, top: portrait ? "20%" : "28%"}}><Surface style={{borderTop: `${9 * unit}px solid ${theme.accent}`}}><div style={{padding: `${18 * unit}px ${34 * unit}px`, display: "flex", justifyContent: "space-between", color: theme.muted, fontSize: 18 * unit, letterSpacing: ".08em"}}><span>{props.league}</span><strong style={{color: theme.accent}}>{props.status}</strong></div><div style={{display: "grid", gridTemplateColumns: portrait ? "1fr" : "1fr auto 1fr", alignItems: "center", gap: 22 * unit, padding: `${28 * unit}px ${42 * unit}px ${38 * unit}px`}}><Team name={props.teamA} detail={props.detailA} align={portrait ? "center" : "right"} /><div style={{display: "flex", justifyContent: "center", alignItems: "center", gap: 24 * unit, fontVariantNumeric: "tabular-nums", fontSize: scoreSize * unit, lineHeight: 1, fontWeight: 850}}><span>{props.scoreA}</span><i style={{width: 30 * unit, height: 5 * unit, background: theme.accent}} /><span>{props.scoreB}</span></div><Team name={props.teamB} detail={props.detailB} align={portrait ? "center" : "left"} /></div></Surface></EntranceExit></AdvancedFrame>;
@@ -117,7 +117,7 @@ const Team: React.FC<{name: string; detail: string; align: "left" | "right" | "c
 
 export const CalloutAnnotation: React.FC<CalloutAnnotationProps> = (props) => {
   const unit = useCanvasUnit();
-  const theme = getMotionTheme(props.stylePreset, props.accentColor);
+  const theme = useResolvedMotionTheme(props.stylePreset, props.accentColor);
   const draw = useDrawProgress(10, 42);
   const {portrait} = useResponsiveCanvas();
   const labelWidth = portrait ? 58 : 35;
@@ -128,7 +128,7 @@ export const MediaCarousel: React.FC<MediaCarouselProps> = (props) => {
   const frame = useCurrentFrame();
   const {durationInFrames} = useVideoConfig();
   const unit = useCanvasUnit();
-  const theme = getMotionTheme(props.stylePreset, props.accentColor);
+  const theme = useResolvedMotionTheme(props.stylePreset, props.accentColor);
   const items = [{asset: props.asset1, label: props.label1}, {asset: props.asset2, label: props.label2}, {asset: props.asset3, label: props.label3}, {asset: props.asset4, label: props.label4}, {asset: props.asset5, label: props.label5}].slice(0, props.itemCount);
   const pageLength = Math.max(1, durationInFrames / items.length);
   const page = Math.min(items.length - 1, Math.floor(frame / pageLength));
@@ -140,7 +140,7 @@ export const MediaCarousel: React.FC<MediaCarouselProps> = (props) => {
 
 export const BeforeAfter: React.FC<BeforeAfterProps> = (props) => {
   const unit = useCanvasUnit();
-  const theme = getMotionTheme(props.stylePreset, props.accentColor);
+  const theme = useResolvedMotionTheme(props.stylePreset, props.accentColor);
   const draw = useDrawProgress(4, 38);
   const vertical = props.orientation === "vertical";
   const divider = 50 + (props.divider - 50) * draw;
@@ -157,7 +157,7 @@ const MediaLabel: React.FC<{text: string; position: "start" | "end"}> = ({text, 
 
 export const SplitScreen: React.FC<SplitScreenProps> = (props) => {
   const unit = useCanvasUnit();
-  const theme = getMotionTheme(props.stylePreset, props.accentColor);
+  const theme = useResolvedMotionTheme(props.stylePreset, props.accentColor);
   const {portrait} = useResponsiveCanvas();
   const items = [{asset: props.asset1, label: props.label1}, {asset: props.asset2, label: props.label2}, {asset: props.asset3, label: props.label3}, {asset: props.asset4, label: props.label4}].slice(0, props.panelCount);
   const lead = props.arrangement === "lead" && items.length > 2 && !portrait;

@@ -7,6 +7,7 @@ import {
   FilePlus,
   FolderOpen,
   Image,
+  Keyboard,
   LayoutTemplate,
   Pause,
   Play,
@@ -22,7 +23,6 @@ import {
 } from "lucide-react";
 import {useCallback, useEffect, useRef, useState} from "react";
 import {
-  CANVAS_PRESETS,
   FRAME_RATE_PRESETS,
   formatTimecode,
   framesToSeconds,
@@ -71,10 +71,14 @@ import type {RenderJobState} from "./render-job";
 import {TemplateLibrary} from "./TemplateLibrary";
 import {ComponentLibrary} from "./ComponentLibrary";
 import {ComposerCanvasOverlay} from "./ComposerCanvasOverlay";
-import {ComposerInspector} from "./ComposerInspector";
+import {ComposerInspector, type ComposerInspectorView} from "./ComposerInspector";
 import {ComposerTimeline} from "./ComposerTimeline";
 import {OutputQuickSettings} from "./OutputQuickSettings";
-import {DimensionInput} from "./DimensionInput";
+import {ResolutionSettings} from "./ResolutionSettings";
+import {TemplateAppearanceEditor} from "./TemplateAppearanceEditor";
+import {CompactPropertyRow, RangeNumberControl} from "./PropertyControls";
+import {ShortcutSettings} from "./ShortcutSettings";
+import {findShortcutCommand, isEditableShortcutTarget, mergeShortcutBindings, type ShortcutBindingMap, type ShortcutCommandId} from "./shortcuts";
 import motionerIcon from "./assets/motioner-icon.png";
 
 type SaveState = "idle" | "dirty" | "saving" | "saved" | "recovery" | "error";
@@ -113,35 +117,7 @@ const DurationInput: React.FC<{
   seconds: number;
   frames: number;
   onCommit: (seconds: number) => void;
-}> = ({seconds, frames, onCommit}) => {
-  const [draft, setDraft] = useState(seconds.toFixed(3));
-  useEffect(() => setDraft(seconds.toFixed(3)), [seconds]);
-
-  const commit = (): void => {
-    const value = Number(draft);
-    if (Number.isFinite(value) && value > 0) onCommit(value);
-    else setDraft(seconds.toFixed(3));
-  };
-
-  return (
-    <label className="field">
-      <span>目标时长（秒）</span>
-      <input
-        type="number"
-        min={0.1}
-        max={7200}
-        step={0.1}
-        value={draft}
-        onChange={(event) => setDraft(event.target.value)}
-        onBlur={commit}
-        onKeyDown={(event) => {
-          if (event.key === "Enter") event.currentTarget.blur();
-        }}
-      />
-      <small className="field-help">实际 {seconds.toFixed(4)} 秒 · {frames} 帧</small>
-    </label>
-  );
-};
+}> = ({seconds, frames, onCommit}) => <CompactPropertyRow label="目标时长" help={`实际 ${seconds.toFixed(4)} 秒 · ${frames} 帧`}><RangeNumberControl ariaLabel="目标时长" value={Number(seconds.toFixed(3))} min={0.1} max={7200} sliderMax={Math.max(60, Math.ceil(seconds))} step={0.1} unit="秒" onChange={onCommit} /></CompactPropertyRow>;
 
 export const App: React.FC = () => {
   const [project, setProject] = useState<MotionProject>(makeInitialProject);
@@ -173,10 +149,14 @@ export const App: React.FC = () => {
   const [composerPreview, setComposerPreview] = useState<ComposerComposition | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [templateInspectorView, setTemplateInspectorView] = useState<TemplateInspectorView>("edit");
+  const [composerInspectorView, setComposerInspectorView] = useState<ComposerInspectorView>("basic");
+  const [shortcutSettingsOpen, setShortcutSettingsOpen] = useState(false);
+  const [shortcutBindings, setShortcutBindings] = useState<ShortcutBindingMap>(() => mergeShortcutBindings(loadStorage("motioner.shortcuts", {})));
   const revisionRef = useRef(0);
   const playerRef = useRef<PlayerRef>(null);
   const scrubWasPlayingRef = useRef(false);
   const batchCsvRef = useRef<HTMLInputElement>(null);
+  const shortcutActionsRef = useRef<Partial<Record<ShortcutCommandId, () => void>>>({});
 
   const manifest = getTemplateManifest(project.template.id);
   const fps = getFrameRate(project.canvas.fps);
@@ -334,6 +314,7 @@ export const App: React.FC = () => {
   useEffect(() => window.localStorage.setItem("motioner.recentTemplates", JSON.stringify(recentTemplates)), [recentTemplates]);
   useEffect(() => window.localStorage.setItem("motioner.parameterPresets", JSON.stringify(parameterPresets)), [parameterPresets]);
   useEffect(() => window.localStorage.setItem("motioner.renderJobs", JSON.stringify(renderJobs)), [renderJobs]);
+  useEffect(() => window.localStorage.setItem("motioner.shortcuts", JSON.stringify(shortcutBindings)), [shortcutBindings]);
 
   useEffect(() => {
     const player = playerRef.current;
@@ -622,10 +603,6 @@ export const App: React.FC = () => {
     playerRef.current?.seekTo(previewFrame);
   };
 
-  const applyMotionPreset = (presetId: ComposerMotionPresetId, phase: "enter" | "exit" | "loop"): void => {
-    if (selectedNodeId) applyMotionPresetToNode(selectedNodeId, presetId, phase);
-  };
-
   const pickComposerMedia = async (field: Extract<InspectorField, {control: "media"}>): Promise<void> => {
     const node = project.composition.nodes.find((candidate) => candidate.id === selectedNodeId);
     if (!node) return;
@@ -642,8 +619,17 @@ export const App: React.FC = () => {
     const player = playerRef.current;
     if (!player) return;
     if (player.isPlaying()) player.pause();
-    else player.play();
-  }, []);
+    else {
+      if (project.editorMode === "template" && currentFrame >= project.canvas.durationInFrames - 1) player.seekTo(0);
+      player.play();
+    }
+  }, [currentFrame, project.canvas.durationInFrames, project.editorMode]);
+
+  const playTemplateOnce = useCallback((): void => {
+    if (project.editorMode !== "template") return;
+    playerRef.current?.seekTo(0);
+    playerRef.current?.play();
+  }, [project.editorMode]);
 
   const beginTimelineScrub = useCallback((): void => {
     const player = playerRef.current;
@@ -661,38 +647,54 @@ export const App: React.FC = () => {
     scrubWasPlayingRef.current = false;
   }, []);
 
-  useEffect(() => {
-    if (project.editorMode !== "composer") return;
-    const handleKeyDown = (event: KeyboardEvent): void => {
-      if (event.code !== "Space" || event.repeat || event.altKey || event.ctrlKey || event.metaKey) return;
-      const target = event.target as HTMLElement | null;
-      // 文本输入元素内的空格仍用于输入；其余情况（含焦点在按钮/选择框上）统一拦截，
-      // 避免空格触发按钮激活而变成“选择/取消选中”，始终作为播放/暂停。
-      if (target?.closest("input, textarea, [contenteditable='true']")) return;
-      event.preventDefault();
-      togglePlayback();
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [project.editorMode, togglePlayback]);
+  const nudgeSelectedNode = (dx: number, dy: number): void => {
+    if (!selectedNodeId) return;
+    const node = project.composition.nodes.find((candidate) => candidate.id === selectedNodeId);
+    if (!node || node.locked) return;
+    const x = Math.min(Math.max(0, 1 - node.transform.width), Math.max(0, node.transform.x + dx));
+    const y = Math.min(Math.max(0, 1 - node.transform.height), Math.max(0, node.transform.y + dy));
+    commitComposition({...project.composition, nodes: project.composition.nodes.map((candidate) => candidate.id === node.id ? {...node, transform: {...node.transform, x, y}} : candidate)});
+  };
 
-  const deleteSelectedNodesRef = useRef(deleteSelectedNodes);
+  shortcutActionsRef.current = {
+    "toggle-playback": togglePlayback,
+    "previous-frame": () => seekTimelineFrame(currentFrame - 1),
+    "next-frame": () => seekTimelineFrame(currentFrame + 1),
+    "timeline-start": () => seekTimelineFrame(0),
+    "timeline-end": () => seekTimelineFrame(project.canvas.durationInFrames - 1),
+    "add-marker": addTimeSlot,
+    "add-segment": addSegment,
+    "duplicate-layer": duplicateSelectedNode,
+    "delete-layer": () => deleteSelectedNodes(false),
+    "ripple-delete": deleteSelectedNodesRipple,
+    "save-project": () => {void saveProject(false);},
+    undo: undoProject,
+    redo: redoProject,
+    "nudge-left": () => nudgeSelectedNode(-0.005, 0),
+    "nudge-right": () => nudgeSelectedNode(0.005, 0),
+    "nudge-up": () => nudgeSelectedNode(0, -0.005),
+    "nudge-down": () => nudgeSelectedNode(0, 0.005),
+    "nudge-left-large": () => nudgeSelectedNode(-0.025, 0),
+    "nudge-right-large": () => nudgeSelectedNode(0.025, 0),
+    "nudge-up-large": () => nudgeSelectedNode(0, -0.025),
+    "nudge-down-large": () => nudgeSelectedNode(0, 0.025),
+  };
+
   useEffect(() => {
-    deleteSelectedNodesRef.current = deleteSelectedNodes;
-  });
-  useEffect(() => {
-    if (project.editorMode !== "composer") return;
-    const handleDeleteKey = (event: KeyboardEvent): void => {
-      if (event.key !== "Delete" && event.key !== "Backspace") return;
-      const target = event.target as HTMLElement | null;
-      if (target?.closest("input, textarea, select, [contenteditable='true']")) return;
-      if (!selectedNodeId) return;
+    const handleShortcut = (event: KeyboardEvent): void => {
+      if (isEditableShortcutTarget(event.target)) return;
+      const command = findShortcutCommand(event, shortcutBindings);
+      if (!command) return;
+      const composerOnly = ["add-marker", "add-segment", "duplicate-layer", "delete-layer", "ripple-delete", "nudge-left", "nudge-right", "nudge-up", "nudge-down", "nudge-left-large", "nudge-right-large", "nudge-up-large", "nudge-down-large"].includes(command);
+      if (composerOnly && project.editorMode !== "composer") return;
+      const repeatable = ["previous-frame", "next-frame", "nudge-left", "nudge-right", "nudge-up", "nudge-down", "nudge-left-large", "nudge-right-large", "nudge-up-large", "nudge-down-large"].includes(command);
+      if (event.repeat && !repeatable) return;
       event.preventDefault();
-      deleteSelectedNodesRef.current(false);
+      shortcutActionsRef.current[command]?.();
     };
-    window.addEventListener("keydown", handleDeleteKey);
-    return () => window.removeEventListener("keydown", handleDeleteKey);
-  }, [project.editorMode, selectedNodeId]);
+    window.addEventListener("keydown", handleShortcut);
+    return () => window.removeEventListener("keydown", handleShortcut);
+  }, [project.editorMode, shortcutBindings]);
 
   useEffect(() => {
     if (project.editorMode !== "composer") return;
@@ -962,6 +964,10 @@ export const App: React.FC = () => {
           <button type="button" className="icon-btn" onClick={undoProject} disabled={undoStack.length === 0} title="撤销" aria-label="撤销"><Undo2 /></button>
           <button type="button" className="icon-btn" onClick={redoProject} disabled={redoStack.length === 0} title="重做" aria-label="重做"><Redo2 /></button>
         </div>
+        <div className="shortcut-settings-anchor">
+          <button type="button" className={`icon-btn toolbar-shortcut-button ${shortcutSettingsOpen ? "active" : ""}`} onClick={() => setShortcutSettingsOpen((open) => !open)} title="键盘快捷键设置" aria-label="键盘快捷键设置" aria-expanded={shortcutSettingsOpen}><Keyboard /></button>
+          <ShortcutSettings open={shortcutSettingsOpen} bindings={shortcutBindings} onClose={() => setShortcutSettingsOpen(false)} onChange={setShortcutBindings} />
+        </div>
         <div className="project-identity" title={projectPath ?? "尚未保存为项目文件"}>
           <strong>{project.name}</strong><span className={`save-indicator save-${saveState}`} aria-hidden="true" /><span>{getProjectFileName(projectPath)}</span>
         </div>
@@ -984,17 +990,19 @@ export const App: React.FC = () => {
       <main id="motioner-workbench" className={`workbench workbench-${project.editorMode}`}>
         {project.editorMode === "template"
           ? <TemplateLibrary selected={manifest} favorites={favorites} recentTemplates={recentTemplates} onSelect={selectTemplate} onToggleFavorite={(templateId) => setFavorites((current) => current.includes(templateId) ? current.filter((id) => id !== templateId) : [...current, templateId])} />
-          : <ComponentLibrary selectedNode={selectedNode} onAdd={addComposerComponent} onApplyMotion={applyMotionPreset} />}
+          : <ComponentLibrary onAdd={addComposerComponent} />}
 
         <section className={`canvas-panel ${project.editorMode === "composer" ? "composer-mode" : ""}`} aria-label="预览画布">
           <div className="canvas-toolbar">
             <div className="canvas-toolbar-copy"><h1>{project.editorMode === "composer" ? "自由编排画布" : "模板预览"}</h1><p>{project.editorMode === "composer" ? `${project.composition.nodes.length} 个图层 · 拖动定位，控制点缩放` : `${manifest.name} · ${manifest.description}`}</p></div>
             <div className="canvas-actions">
-              <button type="button" className={`transport-toggle ${isPlaying ? "active" : ""}`} onClick={togglePlayback} title="播放 / 暂停（空格）">{isPlaying ? <Pause /> : <Play />}{isPlaying ? "暂停" : project.editorMode === "template" ? "快速预览" : "播放"}<kbd>Space</kbd></button>
-              <button type="button" className="icon-btn" onClick={() => playerRef.current?.seekTo(Math.max(0, currentFrame - 1))} title="上一帧" aria-label="上一帧"><ChevronLeft /></button>
-              <button type="button" className="icon-btn" onClick={() => playerRef.current?.seekTo(Math.min(project.canvas.durationInFrames - 1, currentFrame + 1))} title="下一帧" aria-label="下一帧"><ChevronRight /></button>
-              <button type="button" className="icon-btn" onClick={() => playerRef.current?.seekTo(0)} title="首帧" aria-label="首帧"><SkipBack /></button>
-              <button type="button" className="icon-btn" onClick={() => playerRef.current?.seekTo(project.canvas.durationInFrames - 1)} title="末帧" aria-label="末帧"><SkipForward /></button>
+              {project.editorMode === "composer" && <>
+                <button type="button" className={`transport-toggle ${isPlaying ? "active" : ""}`} onClick={togglePlayback} title="播放 / 暂停（空格）">{isPlaying ? <Pause /> : <Play />}{isPlaying ? "暂停" : "播放"}<kbd>Space</kbd></button>
+                <button type="button" className="icon-btn" onClick={() => playerRef.current?.seekTo(Math.max(0, currentFrame - 1))} title="上一帧" aria-label="上一帧"><ChevronLeft /></button>
+                <button type="button" className="icon-btn" onClick={() => playerRef.current?.seekTo(Math.min(project.canvas.durationInFrames - 1, currentFrame + 1))} title="下一帧" aria-label="下一帧"><ChevronRight /></button>
+                <button type="button" className="icon-btn" onClick={() => playerRef.current?.seekTo(0)} title="首帧" aria-label="首帧"><SkipBack /></button>
+                <button type="button" className="icon-btn" onClick={() => playerRef.current?.seekTo(project.canvas.durationInFrames - 1)} title="末帧" aria-label="末帧"><SkipForward /></button>
+              </>}
               <button type="button" className={`icon-btn ${safeArea ? "active" : ""}`} onClick={() => setSafeArea((current) => !current)} title="切换安全区" aria-label="切换安全区"><Scan /></button>
               <select aria-label="预览背景" value={previewBackground} onChange={(event) => setPreviewBackground(event.target.value as PreviewBackground)}><option value="checker">棋盘格</option><option value="black">黑底</option><option value="white">白底</option><option value="gray">50% 灰</option><option value="image">剪辑截图</option></select>
               {previewBackground === "image" && <button type="button" className="icon-btn" onClick={() => void choosePreviewBackgroundImage()} title="选择剪辑截图" aria-label="选择剪辑截图"><Image /></button>}
@@ -1006,7 +1014,7 @@ export const App: React.FC = () => {
           </div>
           {project.editorMode === "composer" && composerScene.nodes.length === 0 && <div className="canvas-empty-hint"><strong>画布没有图层</strong><span>从左侧组件库添加文字、图形、数据或素材。</span></div>}
           <div className={`stage-wrap ${project.editorMode === "composer" ? "composer-stage-wrap" : ""}`}>
-            <div className={`player-frame preview-background-${previewBackground}`} style={{
+            <div className={`player-frame preview-background-${previewBackground}`} onClick={project.editorMode === "template" ? playTemplateOnce : undefined} role={project.editorMode === "template" ? "button" : undefined} tabIndex={project.editorMode === "template" ? 0 : undefined} onKeyDown={project.editorMode === "template" ? (event) => {if (event.key === "Enter") playTemplateOnce();} : undefined} aria-label={project.editorMode === "template" ? "点击从头播放一次模板预览" : undefined} style={{
               aspectRatio: `${project.canvas.width} / ${project.canvas.height}`,
               width: `calc(min(100cqw, 100cqh * ${project.canvas.width / project.canvas.height}) * ${previewZoom / 100})`,
               height: `calc(min(100cqh, 100cqw / ${project.canvas.width / project.canvas.height}) * ${previewZoom / 100})`,
@@ -1023,13 +1031,13 @@ export const App: React.FC = () => {
                 compositionWidth={previewLowQuality ? Math.max(160, Math.round(project.canvas.width / 2)) : project.canvas.width}
                 compositionHeight={previewLowQuality ? Math.max(120, Math.round(project.canvas.height / 2)) : project.canvas.height}
                 fps={fps}
-                inputProps={{mode: project.editorMode, templateId: manifest.id, templateProps: previewProps, composition: composerScene, assets: project.assets, motionSettings: project.animation, typography: project.typography}}
-                controls={project.editorMode === "template"}
-                loop
-                clickToPlay={project.editorMode === "template"}
+                inputProps={{mode: project.editorMode, templateId: manifest.id, templateProps: previewProps, composition: composerScene, assets: project.assets, motionSettings: project.animation, typography: project.typography, templateAppearance: project.templateAppearance}}
+                controls={false}
+                loop={project.editorMode === "composer"}
+                clickToPlay={false}
                 style={{width: "100%", aspectRatio: `${project.canvas.width} / ${project.canvas.height}`}}
               />
-              {project.editorMode === "composer" && <ComposerCanvasOverlay composition={composerScene} selectedNodeId={selectedNodeId} currentFrame={currentFrame} onSelect={selectNodeOnly} onPreview={setComposerPreview} onCommit={commitComposition} onAdd={addComposerComponent} />}
+              {project.editorMode === "composer" && <ComposerCanvasOverlay composition={composerScene} selectedNodeId={selectedNodeId} currentFrame={currentFrame} onSelect={selectNodeOnly} onPreview={setComposerPreview} onCommit={commitComposition} onAdd={addComposerComponent} onApplyMotion={applyMotionPresetToNode} />}
               {safeArea && <div className="safe-area-overlay" aria-hidden="true"><span /></div>}
             </div>
           </div>
@@ -1055,18 +1063,14 @@ export const App: React.FC = () => {
           </div>}
           <div className="inspector-scroll">
           {project.editorMode === "template"
-            ? templateInspectorView === "edit" ? <div className="inspector-tab-panel" key="template-edit"><Inspector manifest={manifest} props={project.props} assets={project.assets} onChange={updateProp} onPickMedia={pickMedia} /></div> : null
-            : <><ComposerInspector node={selectedNode} assets={project.assets} projectDurationInFrames={project.canvas.durationInFrames} onChange={updateSelectedNode} onPickMedia={pickComposerMedia} /><InspectorGroup title="场景" className="scene-editor"><label className="field"><span>背景</span><select value={project.composition.backgroundColor === "transparent" ? "transparent" : "solid"} onChange={(event) => commitComposition({...project.composition, backgroundColor: event.target.value === "transparent" ? "transparent" : "#0B0E12"})}><option value="transparent">透明</option><option value="solid">纯色</option></select></label>{project.composition.backgroundColor !== "transparent" && <label className="field"><span>背景颜色</span><div className="color-control"><input type="color" value={project.composition.backgroundColor} onChange={(event) => commitComposition({...project.composition, backgroundColor: event.target.value})} /><input value={project.composition.backgroundColor.toUpperCase()} onChange={(event) => commitComposition({...project.composition, backgroundColor: event.target.value})} /></div></label>}<label className="field inline-switch"><span>对齐网格</span><input className="switch-control" type="checkbox" checked={project.composition.snapToGrid} onChange={(event) => commitComposition({...project.composition, snapToGrid: event.target.checked})} /></label><label className="field"><span>网格间距</span><select value={project.composition.gridSize} onChange={(event) => commitComposition({...project.composition, gridSize: Number(event.target.value)})}><option value={0.01}>1%</option><option value={0.025}>2.5%</option><option value={0.05}>5%</option><option value={0.1}>10%</option></select></label></InspectorGroup></>}
+            ? templateInspectorView === "edit" ? <div className="inspector-tab-panel" key="template-edit"><TemplateAppearanceEditor value={project.templateAppearance} onChange={(templateAppearance) => markChanged({...project, templateAppearance})} /><Inspector manifest={manifest} props={project.props} assets={project.assets} onChange={updateProp} onPickMedia={pickMedia} /></div> : null
+            : <><ComposerInspector node={selectedNode} assets={project.assets} projectDurationInFrames={project.canvas.durationInFrames} view={composerInspectorView} onViewChange={setComposerInspectorView} onChange={updateSelectedNode} onPickMedia={pickComposerMedia} />{composerInspectorView === "basic" && <InspectorGroup title="场景" className="scene-editor"><label className="field"><span>背景</span><select value={project.composition.backgroundColor === "transparent" ? "transparent" : "solid"} onChange={(event) => commitComposition({...project.composition, backgroundColor: event.target.value === "transparent" ? "transparent" : "#0B0E12"})}><option value="transparent">透明</option><option value="solid">纯色</option></select></label>{project.composition.backgroundColor !== "transparent" && <label className="field"><span>背景颜色</span><div className="color-control"><input type="color" value={project.composition.backgroundColor} onChange={(event) => commitComposition({...project.composition, backgroundColor: event.target.value})} /><input value={project.composition.backgroundColor.toUpperCase()} onChange={(event) => commitComposition({...project.composition, backgroundColor: event.target.value})} /></div></label>}<label className="field inline-switch"><span>对齐网格</span><input className="switch-control" type="checkbox" checked={project.composition.snapToGrid} onChange={(event) => commitComposition({...project.composition, snapToGrid: event.target.checked})} /></label><label className="field"><span>网格间距</span><select value={project.composition.gridSize} onChange={(event) => commitComposition({...project.composition, gridSize: Number(event.target.value)})}><option value={0.01}>1%</option><option value={0.025}>2.5%</option><option value={0.05}>5%</option><option value={0.1}>10%</option></select></label></InspectorGroup>}</>}
           {(project.editorMode === "composer" || templateInspectorView === "export") && <InspectorGroup title="字体" className="typography-editor"><label className="field"><span>默认字体风格</span><select value={project.typography.fallbackFamily} onChange={(event) => markChanged({...project, typography: {...project.typography, fallbackFamily: event.target.value as MotionProject["typography"]["fallbackFamily"]}})}><option value="system">系统无衬线</option><option value="serif">宋体 / 衬线</option><option value="mono">等宽字体</option></select></label><div className="font-picker"><button type="button" onClick={() => void pickProjectFont()}>{selectedFont ? "替换字体" : "导入字体…"}</button><span title={selectedFont?.path}>{selectedFont?.path.split(/[\\/]/).at(-1) ?? "未导入项目字体"}</span>{selectedFont && <button type="button" className="icon-btn" onClick={() => markChanged({...project, typography: {...project.typography, fontAssetId: ""}})} title="恢复默认字体"><RotateCcw />恢复默认</button>}</div><small className="field-help">字体会作为项目素材保存指纹；请确认拥有相应使用授权。</small></InspectorGroup>}
-          {(project.editorMode === "composer" || templateInspectorView === "export") && <InspectorGroup title="全局动画" className="animation-editor"><label className="field"><span>速度</span><select value={project.animation.speed} onChange={(event) => updateAnimation({speed: Number(event.target.value)})}><option value={0.5}>0.5× 慢速</option><option value={0.75}>0.75×</option><option value={1}>1× 标准</option><option value={1.25}>1.25×</option><option value={1.5}>1.5×</option><option value={2}>2× 快速</option></select></label><label className="field"><span>入场 / 退场边缘帧</span><input type="number" min={6} max={90} value={project.animation.edgeFrames} onChange={(event) => updateAnimation({edgeFrames: Math.min(90, Math.max(6, event.target.valueAsNumber || 18))})} /></label><label className="field inline-switch"><span>减少动态（取消位移与数字滚动）</span><input className="switch-control" type="checkbox" checked={project.animation.reducedMotion} onChange={(event) => updateAnimation({reducedMotion: event.target.checked})} /></label></InspectorGroup>}
+          {(project.editorMode === "composer" || templateInspectorView === "export") && <InspectorGroup title="全局动画" className="animation-editor"><label className="field"><span>速度</span><select value={project.animation.speed} onChange={(event) => updateAnimation({speed: Number(event.target.value)})}><option value={0.5}>0.5× 慢速</option><option value={0.75}>0.75×</option><option value={1}>1× 标准</option><option value={1.25}>1.25×</option><option value={1.5}>1.5×</option><option value={2}>2× 快速</option></select></label><CompactPropertyRow label="边缘帧"><RangeNumberControl ariaLabel="入场退场边缘帧" value={project.animation.edgeFrames} min={6} max={90} resetValue={18} onChange={(edgeFrames) => updateAnimation({edgeFrames})} /></CompactPropertyRow><label className="field inline-switch"><span>减少动态（取消位移与数字滚动）</span><input className="switch-control" type="checkbox" checked={project.animation.reducedMotion} onChange={(event) => updateAnimation({reducedMotion: event.target.checked})} /></label></InspectorGroup>}
           {project.editorMode === "template" && templateInspectorView === "export" ? <InspectorGroup title="工作流与批量" className="preset-editor"><label className="field"><span>参数预设</span><select value="" onChange={(event) => applyParameterPreset(event.target.value)}><option value="">选择已保存预设…</option>{parameterPresets.filter((preset) => preset.templateId === manifest.id).map((preset) => <option key={preset.id} value={preset.id}>{preset.name}</option>)}</select></label><div className="workflow-actions"><button type="button" onClick={saveParameterPreset}>保存当前参数</button><button type="button" onClick={() => void exportParameterPresets()} disabled={parameterPresets.length === 0}>导出预设</button><button type="button" onClick={() => void importParameterPresets()}>导入预设</button><button type="button" onClick={() => void collectProjectAssets()} disabled={project.assets.length === 0}>收集素材</button><button type="button" onClick={() => void relinkProjectAssets("files")} disabled={project.assets.length === 0}>重链文件</button><button type="button" onClick={() => void relinkProjectAssets("folder")} disabled={project.assets.length === 0}>扫描文件夹</button><button type="button" onClick={() => batchCsvRef.current?.click()}>CSV 批量生成</button><input ref={batchCsvRef} className="sr-only" type="file" accept=".csv,text/csv" onChange={(event) => {const file = event.target.files?.[0]; if (file) void importBatchCsv(file);}} /></div><small className="field-help">高级工具默认收纳在导出设置中；CSV 一次最多 100 行。</small></InspectorGroup> : project.editorMode === "composer" ? <InspectorGroup title="项目素材" className="preset-editor"><div className="workflow-actions"><button type="button" onClick={() => void collectProjectAssets()} disabled={project.assets.length === 0}>收集素材</button><button type="button" onClick={() => void relinkProjectAssets("files")} disabled={project.assets.length === 0}>重链文件</button><button type="button" onClick={() => void relinkProjectAssets("folder")} disabled={project.assets.length === 0}>扫描文件夹</button></div><small className="field-help">图片、视频与字体都保存在项目素材清单中，可集中收集或重新链接。</small></InspectorGroup> : null}
           {project.editorMode === "template" && templateInspectorView === "export" && batchDraft && <InspectorGroup title="批量生成" defaultOpen><BatchImportPanel draft={batchDraft} project={project} manifest={manifest} onChange={setBatchDraft} onClose={() => setBatchDraft(null)} onStart={startBatchProjects} /></InspectorGroup>}
           {(project.editorMode === "composer" || templateInspectorView === "export") && <InspectorGroup title="输出规格" className="output-editor" defaultOpen={project.editorMode === "template"}>
-            <label className="field"><span>画布预设</span><select value={CANVAS_PRESETS.find((preset) => preset.width === project.canvas.width && preset.height === project.canvas.height)?.id ?? "custom"} onChange={(event) => {
-              const preset = CANVAS_PRESETS.find((candidate) => candidate.id === event.target.value);
-              if (preset) updateCanvas({width: preset.width, height: preset.height});
-            }}><option value="custom">自定义</option>{CANVAS_PRESETS.map((preset) => <option key={preset.id} value={preset.id}>{preset.label}</option>)}</select></label>
-            <DimensionInput width={project.canvas.width} height={project.canvas.height} onCommit={(w, h) => updateCanvas({width: w, height: h})} />
+            <ResolutionSettings width={project.canvas.width} height={project.canvas.height} onCommit={(width, height) => updateCanvas({width, height})} />
             <label className="field"><span>帧率</span><select value={frameRateKey(project.canvas.fps)} onChange={(event) => changeFrameRate(event.target.value)}>{FRAME_RATE_PRESETS.map((preset) => <option key={frameRateKey(preset.value)} value={frameRateKey(preset.value)}>{preset.label} fps</option>)}</select></label>
             <DurationInput seconds={durationSeconds} frames={project.canvas.durationInFrames} onCommit={(seconds) => updateCanvas({durationInFrames: secondsToFrames(seconds, project.canvas.fps)})} />
             <label className="field"><span>导出格式</span><select value={project.exportPresetId} onChange={(event) => markChanged({...project, exportPresetId: getExportPreset(event.target.value).id})}>{EXPORT_PRESETS.map((preset) => <option key={preset.id} value={preset.id}>{preset.label}</option>)}</select><small className="field-help">{selectedExportPreset.description}</small></label>

@@ -7,6 +7,7 @@ import {
   projectAnimationSchema,
   projectAssetSchema,
   projectTypographySchema,
+  templateAppearanceSchema,
 } from "../../packages/project-model/src";
 
 const motionerCompositionSchema = z.object({
@@ -17,6 +18,7 @@ const motionerCompositionSchema = z.object({
   assets: z.array(projectAssetSchema.extend({src: z.string().optional()})),
   reviewBackground: z.string().optional(),
   motionSettings: projectAnimationSchema.optional(),
+  templateAppearance: templateAppearanceSchema.optional(),
   typography: projectTypographySchema.optional(),
 });
 
@@ -47,6 +49,7 @@ export const RemotionRoot: React.FC = () => {
         composition: createEmptyComposerComposition(),
         reviewBackground: undefined,
         motionSettings: undefined,
+        templateAppearance: undefined,
         typography: undefined,
       }}
     />

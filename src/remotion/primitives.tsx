@@ -11,7 +11,7 @@ import {
   useCurrentFrame,
   useVideoConfig,
 } from "remotion";
-import type {ProjectAsset} from "../../packages/project-model/src";
+import type {ProjectAsset, TemplateAppearance} from "../../packages/project-model/src";
 import {getFixedEdgesTimeline} from "../../packages/template-sdk/src";
 
 export type MotionTheme = {
@@ -37,9 +37,23 @@ const defaultTheme: MotionTheme = {
 };
 
 const themeContext = createContext<MotionTheme>(defaultTheme);
+const templateAppearanceContext = createContext<TemplateAppearance | undefined>(undefined);
 
-export const getMotionTheme = (preset: string, accent: string): MotionTheme => {
-  if (preset === "minimal") return {
+const colorWithOpacity = (color: string, opacity: number): string => {
+  const red = Number.parseInt(color.slice(1, 3), 16);
+  const green = Number.parseInt(color.slice(3, 5), 16);
+  const blue = Number.parseInt(color.slice(5, 7), 16);
+  return `rgba(${red},${green},${blue},${opacity})`;
+};
+
+const isLightSurface = (color: string): boolean => {
+  const channels = [1, 3, 5].map((offset) => Number.parseInt(color.slice(offset, offset + 2), 16) / 255)
+    .map((channel) => channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4);
+  return 0.2126 * (channels[0] ?? 0) + 0.7152 * (channels[1] ?? 0) + 0.0722 * (channels[2] ?? 0) > 0.42;
+};
+
+export const getMotionTheme = (preset: string, accent: string, appearance?: TemplateAppearance): MotionTheme => {
+  const base = preset === "minimal" ? {
     id: preset,
     ink: "#FFFFFF",
     muted: "rgba(255,255,255,0.58)",
@@ -48,8 +62,7 @@ export const getMotionTheme = (preset: string, accent: string): MotionTheme => {
     grid: "rgba(255,255,255,0.26)",
     accent,
     radius: 8,
-  };
-  if (preset === "vibrant" || preset === "sport") return {
+  } : preset === "vibrant" || preset === "sport" ? {
     id: preset,
     ink: "#FFFFFF",
     muted: "rgba(255,255,255,0.7)",
@@ -58,17 +71,37 @@ export const getMotionTheme = (preset: string, accent: string): MotionTheme => {
     grid: "rgba(255,255,255,0.18)",
     accent,
     radius: 4,
+  } : {...defaultTheme, accent};
+  if (!appearance?.surfaceColor) return base;
+  const light = appearance.surfaceTone === "light" || (appearance.surfaceTone === "auto" && isLightSurface(appearance.surfaceColor));
+  const opacity = appearance.surfaceOpacity;
+  return {
+    ...base,
+    ink: light ? "#111418" : "#F7F9FB",
+    muted: light ? "rgba(17,20,24,0.68)" : "rgba(247,249,251,0.66)",
+    grid: light ? "rgba(17,20,24,0.18)" : "rgba(255,255,255,0.18)",
+    surface: colorWithOpacity(appearance.surfaceColor, opacity),
+    surfaceSoft: colorWithOpacity(appearance.surfaceColor, opacity * 0.82),
   };
-  return {...defaultTheme, accent};
+};
+
+export const TemplateAppearanceProvider: React.FC<{appearance?: TemplateAppearance; children: React.ReactNode}> = ({appearance, children}) => (
+  <templateAppearanceContext.Provider value={appearance}>{children}</templateAppearanceContext.Provider>
+);
+
+export const useResolvedMotionTheme = (preset: string, accent: string): MotionTheme => {
+  const appearance = useContext(templateAppearanceContext);
+  return getMotionTheme(preset, accent, appearance);
 };
 
 export const ThemeProvider: React.FC<{
   preset: string;
   accent: string;
   children: React.ReactNode;
-}> = ({preset, accent, children}) => (
-  <themeContext.Provider value={getMotionTheme(preset, accent)}>{children}</themeContext.Provider>
-);
+}> = ({preset, accent, children}) => {
+  const appearance = useContext(templateAppearanceContext);
+  return <themeContext.Provider value={getMotionTheme(preset, accent, appearance)}>{children}</themeContext.Provider>;
+};
 
 export const useMotionTheme = (): MotionTheme => useContext(themeContext);
 

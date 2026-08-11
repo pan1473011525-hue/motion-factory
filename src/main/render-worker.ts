@@ -431,6 +431,7 @@ const runRender = async (message: RenderWorkerStartMessage): Promise<void> => {
       assets: assetRuntime.runtimeAssets,
       motionSettings: message.project.animation,
       typography: message.project.typography,
+      templateAppearance: message.project.templateAppearance,
       ...(preset.id === "h264-review" ? {reviewBackground: "#0B0E12"} : {}),
     };
     const composition = await selectComposition({

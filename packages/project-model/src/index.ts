@@ -49,6 +49,19 @@ export const projectTypographySchema = z.object({
   fallbackFamily: z.enum(["system", "serif", "mono"]),
 });
 
+export const templateAppearanceSchema = z.object({
+  // null means "use the template's original surface palette" for backwards compatibility.
+  surfaceColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/u).nullable(),
+  surfaceOpacity: z.number().min(0).max(1),
+  surfaceTone: z.enum(["auto", "dark", "light"]),
+});
+
+export const DEFAULT_TEMPLATE_APPEARANCE = {
+  surfaceColor: null,
+  surfaceOpacity: 1,
+  surfaceTone: "auto",
+} as const;
+
 export const projectExportOptionsSchema = z.object({
   conflictPolicy: z.enum(["version", "replace", "skip"]),
   segmented: z.boolean().default(false),
@@ -176,6 +189,7 @@ export const motionProjectSchema = z.object({
   assets: z.array(projectAssetSchema),
   animation: projectAnimationSchema.default({speed: 1, reducedMotion: false, edgeFrames: 18}),
   typography: projectTypographySchema.default({fontAssetId: "", fallbackFamily: "system"}),
+  templateAppearance: templateAppearanceSchema.default(DEFAULT_TEMPLATE_APPEARANCE),
   exportOptions: projectExportOptionsSchema.default({conflictPolicy: "version", segmented: false}),
   editorMode: z.enum(["template", "composer"]).default("template"),
   composition: composerCompositionSchema.default(createEmptyComposerComposition),
@@ -198,6 +212,7 @@ const legacyMotionProjectSchema = z.object({
   assets: z.array(projectAssetSchema),
   animation: projectAnimationSchema.default({speed: 1, reducedMotion: false, edgeFrames: 18}),
   typography: projectTypographySchema.default({fontAssetId: "", fallbackFamily: "system"}),
+  templateAppearance: templateAppearanceSchema.default(DEFAULT_TEMPLATE_APPEARANCE),
   exportOptions: projectExportOptionsSchema.default({conflictPolicy: "version", segmented: false}),
   exportPresetId: exportPresetIdSchema,
   updatedAt: z.string().datetime({offset: true}),
@@ -208,6 +223,7 @@ export type ExportPresetId = z.infer<typeof exportPresetIdSchema>;
 export type ProjectAsset = z.infer<typeof projectAssetSchema>;
 export type ProjectAnimation = z.infer<typeof projectAnimationSchema>;
 export type ProjectTypography = z.infer<typeof projectTypographySchema>;
+export type TemplateAppearance = z.infer<typeof templateAppearanceSchema>;
 export type ProjectExportOptions = z.infer<typeof projectExportOptionsSchema>;
 export type TimeSlot = z.infer<typeof timeSlotSchema>;
 export type Segment = z.infer<typeof segmentSchema>;
@@ -270,6 +286,7 @@ export const createMotionProject = (
     assets: [],
     animation: {speed: 1, reducedMotion: false, edgeFrames: 18},
     typography: {fontAssetId: "", fallbackFamily: "system"},
+    templateAppearance: DEFAULT_TEMPLATE_APPEARANCE,
     exportOptions: {conflictPolicy: "version", segmented: false},
     editorMode: "template",
     composition: createEmptyComposerComposition(),

@@ -4,7 +4,14 @@ import {
   type FrameRate,
 } from "../../../packages/project-model/src";
 import {EXPORT_PRESETS, type ExportPresetId} from "../../shared/export-presets";
-import {DimensionInput} from "./DimensionInput";
+import {
+  RESOLUTION_TIERS,
+  getCanvasOrientation,
+  getPresetDimensions,
+  getResolutionTier,
+  type CanvasOrientation,
+  type ResolutionTier,
+} from "./resolution-presets";
 
 const frameRateKey = (fps: FrameRate): string => `${fps.numerator}/${fps.denominator}`;
 
@@ -56,11 +63,23 @@ export const OutputQuickSettings: React.FC<{
   onDurationChange: (seconds: number) => void;
   onExportPresetChange: (presetId: ExportPresetId) => void;
 }> = ({width, height, fps, durationSeconds, exportPresetId, onDimensionCommit, onFrameRateChange, onDurationChange, onExportPresetChange}) => {
+  const resolutionTier = getResolutionTier(width, height);
+  const orientation = getCanvasOrientation(width, height);
+  const applyPreset = (tier: ResolutionTier, nextOrientation: CanvasOrientation): void => {
+    const dimensions = getPresetDimensions(tier, nextOrientation);
+    onDimensionCommit(dimensions.width, dimensions.height);
+  };
   return <div className="output-quick-settings" aria-label="快捷输出设置">
-    <label className="quick-output-control quick-resolution" title="点击修改分辨率，失焦或回车生效；⇄ 切换横竖屏">
-      <span className="sr-only">分辨率</span>
-      <DimensionInput compact width={width} height={height} onCommit={onDimensionCommit} />
-    </label>
+    <div className="quick-output-control quick-resolution" title="选择清晰度档位和横竖屏；自定义尺寸请前往导出设置">
+      <label><span className="sr-only">清晰度</span><select aria-label="清晰度" value={resolutionTier ?? "custom"} onChange={(event) => {
+        if (event.target.value !== "custom") applyPreset(event.target.value as ResolutionTier, orientation);
+      }}><option value="custom" disabled>自定义</option>{RESOLUTION_TIERS.map((preset) => <option key={preset.id} value={preset.id}>{preset.label}</option>)}</select></label>
+      <label><span className="sr-only">画面方向</span><select aria-label="画面方向" value={orientation} onChange={(event) => {
+        const nextOrientation = event.target.value as CanvasOrientation;
+        if (resolutionTier) applyPreset(resolutionTier, nextOrientation);
+        else onDimensionCommit(nextOrientation === "portrait" ? Math.min(width, height) : Math.max(width, height), nextOrientation === "portrait" ? Math.max(width, height) : Math.min(width, height));
+      }}><option value="landscape">横屏</option><option value="portrait">竖屏</option></select></label>
+    </div>
     <label className="quick-output-control quick-fps" title="点击修改帧率">
       <span className="sr-only">帧率</span>
       <select aria-label="帧率" value={frameRateKey(fps)} onChange={(event) => onFrameRateChange(event.target.value)}>

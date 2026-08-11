@@ -1,6 +1,7 @@
 import {useRef, useState} from "react";
-import type {ComposerComponentId, ComposerComposition, ComposerNode} from "../../../packages/project-model/src";
-import {composerComponents} from "../../composer/registry";
+import type {ComposerComponentId, ComposerComposition, ComposerMotionPresetId, ComposerNode} from "../../../packages/project-model/src";
+import {composerComponents, motionPresets} from "../../composer/registry";
+import {chooseMotionDropPhase, type MotionDropPhase} from "./timeline-interaction";
 
 type ResizeHandle = "move" | "n" | "s" | "e" | "w" | "ne" | "nw" | "se" | "sw";
 
@@ -38,6 +39,14 @@ const readDraggedComponent = (event: React.DragEvent): ComposerComponentId | nul
 const isComponentDrag = (event: React.DragEvent): boolean =>
   Array.from(event.dataTransfer.types).includes("application/x-motioner-component");
 
+const isMotionDrag = (event: React.DragEvent): boolean =>
+  Array.from(event.dataTransfer.types).includes("application/x-motioner-motion-preset");
+
+const readDraggedMotion = (event: React.DragEvent): ComposerMotionPresetId | null => {
+  const value = event.dataTransfer.getData("application/x-motioner-motion-preset") || event.dataTransfer.getData("text/plain");
+  return motionPresets.some((preset) => preset.id === value && value !== "none") ? value as ComposerMotionPresetId : null;
+};
+
 export const ComposerCanvasOverlay: React.FC<{
   composition: ComposerComposition;
   selectedNodeId: string | null;
@@ -46,10 +55,12 @@ export const ComposerCanvasOverlay: React.FC<{
   onPreview: (composition: ComposerComposition | null) => void;
   onCommit: (composition: ComposerComposition) => void;
   onAdd: (componentId: ComposerComponentId, position: {x: number; y: number}) => void;
-}> = ({composition, selectedNodeId, currentFrame, onSelect, onPreview, onCommit, onAdd}) => {
+  onApplyMotion: (nodeId: string, presetId: ComposerMotionPresetId, phase: MotionDropPhase) => void;
+}> = ({composition, selectedNodeId, currentFrame, onSelect, onPreview, onCommit, onAdd, onApplyMotion}) => {
   const overlayRef = useRef<HTMLDivElement>(null);
   const pointerRef = useRef<PointerSession | null>(null);
   const [componentDropPosition, setComponentDropPosition] = useState<{x: number; y: number} | null>(null);
+  const [motionDrop, setMotionDrop] = useState<{nodeId: string; presetId: ComposerMotionPresetId; phase: MotionDropPhase} | null>(null);
 
   const beginPointer = (event: React.PointerEvent, node: ComposerNode, mode: ResizeHandle): void => {
     event.preventDefault();
@@ -112,17 +123,6 @@ export const ComposerCanvasOverlay: React.FC<{
     if (session.lastScene) onCommit(session.lastScene);
   };
 
-  const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>): void => {
-    if (!selectedNodeId || !["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(event.key)) return;
-    const node = composition.nodes.find((candidate) => candidate.id === selectedNodeId);
-    if (!node || node.locked) return;
-    event.preventDefault();
-    const amount = event.shiftKey ? 0.025 : 0.005;
-    const x = clamp(node.transform.x + (event.key === "ArrowLeft" ? -amount : event.key === "ArrowRight" ? amount : 0), 0, Math.max(0, 1 - node.transform.width));
-    const y = clamp(node.transform.y + (event.key === "ArrowUp" ? -amount : event.key === "ArrowDown" ? amount : 0), 0, Math.max(0, 1 - node.transform.height));
-    onCommit(replaceNode(composition, {...node, transform: {...node.transform, x, y}}));
-  };
-
   const activeNodes = composition.nodes.filter((node) => !node.hidden && currentFrame >= node.timing.from && currentFrame < node.timing.from + node.timing.durationInFrames);
   return <div
     ref={overlayRef}
@@ -133,7 +133,6 @@ export const ComposerCanvasOverlay: React.FC<{
     onPointerMove={handlePointerMove}
     onPointerUp={endPointer}
     onPointerCancel={endPointer}
-    onKeyDown={handleKeyDown}
     onDragOver={(event) => {
       if (!isComponentDrag(event)) return;
       event.preventDefault();
@@ -164,13 +163,39 @@ export const ComposerCanvasOverlay: React.FC<{
     {componentDropPosition && <div className="composer-component-drop" style={{left: `${componentDropPosition.x * 100}%`, top: `${componentDropPosition.y * 100}%`}} aria-hidden="true"><span>在此创建</span></div>}
     {activeNodes.map((node) => {
       const selected = node.id === selectedNodeId;
+      const activeMotionDrop = motionDrop?.nodeId === node.id ? motionDrop : null;
       return <div
         key={node.id}
         className={`composer-node-box ${selected ? "selected" : ""} ${node.locked ? "locked" : ""}`}
         style={{left: `${node.transform.x * 100}%`, top: `${node.transform.y * 100}%`, width: `${node.transform.width * 100}%`, height: `${node.transform.height * 100}%`, rotate: `${node.transform.rotation}deg`, zIndex: 20_000 + node.transform.zIndex}}
         onPointerDown={(event) => beginPointer(event, node, "move")}
+        onDragOver={(event) => {
+          if (!isMotionDrag(event) || node.locked) return;
+          const presetId = readDraggedMotion(event);
+          const preset = motionPresets.find((candidate) => candidate.id === presetId);
+          if (!presetId || !preset) return;
+          event.preventDefault();
+          event.stopPropagation();
+          event.dataTransfer.dropEffect = "copy";
+          const bounds = event.currentTarget.getBoundingClientRect();
+          const phase = chooseMotionDropPhase((event.clientX - bounds.left) / Math.max(1, bounds.width), preset.phases);
+          if (phase) setMotionDrop({nodeId: node.id, presetId, phase});
+        }}
+        onDragLeave={(event) => {
+          if (event.currentTarget.contains(event.relatedTarget as Node | null)) return;
+          setMotionDrop((current) => current?.nodeId === node.id ? null : current);
+        }}
+        onDrop={(event) => {
+          if (!activeMotionDrop) return;
+          event.preventDefault();
+          event.stopPropagation();
+          onSelect(node.id);
+          onApplyMotion(node.id, activeMotionDrop.presetId, activeMotionDrop.phase);
+          setMotionDrop(null);
+        }}
         aria-label={`${node.name}${node.locked ? "，已锁定" : ""}`}
       >
+        {activeMotionDrop && <span className="canvas-motion-drop-zones" aria-hidden="true"><b className={activeMotionDrop.phase === "enter" ? "active" : ""}>入场</b><b className={activeMotionDrop.phase === "loop" ? "active" : ""}>持续</b><b className={activeMotionDrop.phase === "exit" ? "active" : ""}>退场</b></span>}
         {selected && <>
           <span className="composer-node-label">{node.name}</span>
           {(["nw", "n", "ne", "e", "se", "s", "sw", "w"] as const).map((handle) => <button type="button" tabIndex={-1} aria-label={`调整${handle}`} key={handle} className={`resize-handle handle-${handle}`} onPointerDown={(event) => beginPointer(event, node, handle)} />)}

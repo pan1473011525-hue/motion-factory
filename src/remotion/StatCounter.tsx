@@ -8,7 +8,7 @@ import {
 } from "remotion";
 import type {StatCounterProps} from "../templates/stat-counter/manifest";
 import {formatStatValue, getCounterValueAtProgress} from "../shared/format-stat";
-import {useCanvasUnit, useMotionSettings, useProjectFontFamily} from "./primitives";
+import {useCanvasUnit, useMotionSettings, useProjectFontFamily, useResolvedMotionTheme} from "./primitives";
 
 export const StatCounter: React.FC<StatCounterProps> = ({
   title,
@@ -38,6 +38,7 @@ export const StatCounter: React.FC<StatCounterProps> = ({
 
   const isMinimal = stylePreset === "minimal";
   const isSport = stylePreset === "sport";
+  const theme = useResolvedMotionTheme(stylePreset, accentColor);
 
   return (
     <AbsoluteFill
@@ -59,9 +60,9 @@ export const StatCounter: React.FC<StatCounterProps> = ({
           boxSizing: "border-box",
           padding: `${58 * unit}px ${64 * unit}px ${52 * unit}px`,
           borderRadius: (isSport ? 4 : 16) * unit,
-          color: "white",
-          backgroundColor: isMinimal ? "rgba(9, 12, 16, 0.62)" : isSport ? "rgba(5, 8, 10, 0.96)" : "rgba(13, 20, 28, 0.92)",
-          border: isMinimal ? `${Math.max(1, unit)}px solid rgba(255,255,255,0.28)` : isSport ? `${Math.max(1, 2 * unit)}px solid ${accentColor}` : "none",
+          color: theme.ink,
+          backgroundColor: theme.surface,
+          border: isMinimal ? `${Math.max(1, unit)}px solid ${theme.grid}` : isSport ? `${Math.max(1, 2 * unit)}px solid ${accentColor}` : "none",
           boxShadow: "0 8px 8px rgba(0, 0, 0, 0.18)",
           opacity: interpolate(
             frame,
@@ -111,7 +112,7 @@ export const StatCounter: React.FC<StatCounterProps> = ({
         <Interactive.Div
           name="Title"
           style={{
-            color: "rgba(255, 255, 255, 0.72)",
+            color: theme.muted,
             fontSize: 46 * unit,
             fontWeight: 560,
             letterSpacing: "-0.015em",
@@ -138,7 +139,7 @@ export const StatCounter: React.FC<StatCounterProps> = ({
           <Interactive.Div
             name="Value"
             style={{
-              color: "white",
+              color: theme.ink,
               fontSize: (isSport ? 180 : 168) * unit / Math.sqrt(valueDensity),
               fontStyle: isSport ? "italic" : "normal",
               fontWeight: 720,
@@ -170,7 +171,7 @@ export const StatCounter: React.FC<StatCounterProps> = ({
           name="Source"
           style={{
             marginTop: 34 * unit,
-            color: "rgba(255, 255, 255, 0.56)",
+            color: theme.muted,
             fontSize: 28 * unit,
             fontWeight: 450,
             letterSpacing: "0.01em",

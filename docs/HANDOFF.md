@@ -89,14 +89,25 @@
 - 新增 `docs/阶段三完成报告.md` 与两种模式 1440×900 截图。未新增任意属性关键帧模型,未修改项目/模板/导出/动画契约。
 - 验证:`pnpm check` 23 文件/64 测试;Impeccable 检测 0 项;`test:exports` 五类真实输出、`package:dmg`、包内完整性、打包应用 3 段 E2E 与 `hdiutil verify` 全通过。
 
+### 12. UI 阶段三实测问题修订(2026-08-11)
+- 模板播放控制单一化:移除画面内原生播放按钮/进度条和模板循环,仅保留下方简化时间线;点击模板预览区域从首帧播放一次。
+- 新增项目级可选 `templateAppearance`(底色、透明度、自动深浅前景),提供原始/透明/深浅色预设、自定义 HEX、最近颜色和不透明度。旧项目自动补默认值;模组外围透明不变,预览与真实导出同源。
+- 顶栏输出改为 1K/2K/4K + 横竖屏预设;导出设置才显示自定义宽高。实机验收中修复了“选择自定义后立即回到 1K”的局部状态问题。
+- 新增紧凑滑块 + 数字输入控件,覆盖模板连续数值、时长、图层变换/时间和动效帧数/强度;自由编排右侧拆为「基础设置 / 动效设置」,模板快照后置。
+- 动效库移除勾选框、阶段按钮和点击应用,改为拖到画布组件/时间线图层;左侧使用 Lucide 动效图标避免勾选框视觉歧义,右侧按入场/持续/退场分组编辑。
+- 时间线运输、标记、分段、图层顺序、波纹删除和普通删除统一为 30px Lucide 图标,按桌面剪辑工作流分组。
+- 新增集中快捷键系统与设置面板:命令搜索、录入、冲突拦截、清除、单项/全部重置;用户映射保存在 `localStorage`,不写项目。实机验证方向键逐帧与 Command+方向键首尾跳转。
+- 新增 `docs/UI_UX_REFINEMENT_EXECUTION_PLAN.md`、5 张实测修订截图及对应完成报告补充。
+- 验证:`pnpm check` 26 文件/75 测试;`test:exports` 两种 ProRes、PNG RGBA、H.264 整片和三分段全通过;`package:dmg`、8 项包内完整性、打包应用 H.264 三段/75 帧 E2E、`hdiutil verify` 全通过。
+
 ---
 
 ## 三、当前项目状态
 
 - **版本**:1.3.1(应用版本号未随功能递增;如需发版请先更新 `package.json` version 与 README)。
-- **测试**:`pnpm check` 全绿 —— 23 个测试文件 / 64 项测试(lint + tsc + vitest)。
-- **构建产物**:`release/Motioner-1.3.1-arm64.dmg`(274,278,374 bytes,约 261.6 MiB)+ `Motioner-integrity.json` + `SHA256SUMS.txt`;当前 DMG SHA256:`c3a3376c66ba008edabf07839667f803f3a0bd74c476fe1f39f7614c4d281be5`。
-- **Git**:方向 9 与 UI 重构阶段一/二/三均已实现;`docs/CODEX_HANDOFF_PROMPT.md`、`docs/design-reference/`、`docs/ui-redesign-plan.md` 为本轮开始前已存在的未跟踪用户资料,未纳入提交。
+- **测试**:`pnpm check` 全绿 —— 26 个测试文件 / 75 项测试(lint + tsc + vitest)。
+- **构建产物**:`release/Motioner-1.3.1-arm64.dmg`(274,244,601 bytes,约 261.5 MiB)+ `Motioner-integrity.json` + `SHA256SUMS.txt`;当前 DMG SHA256:`017379eaa3d840ea47bc1789a46b60d55d6ee1cee4aef8213a5d0f3ee7e674cf`。
+- **Git**:方向 9、UI 重构阶段一/二/三及阶段三实测修订均已实现;`docs/CODEX_HANDOFF_PROMPT.md`、`docs/design-reference/`、`docs/ui-redesign-plan.md` 为本轮开始前已存在的未跟踪用户资料,未纳入提交。
 - **新增依赖**:`@remotion/media`、`@remotion/media-utils`、`@remotion/animation-utils`(均 4.0.507)、`lucide-react`(1.30.0),均已入 `package.json` 与 lock。
 
 ---
@@ -161,3 +172,4 @@ pnpm package:dmg      # 完整打包:build + electron-builder + verify + package
 - 2026-08-11:完成 UI 重构阶段一——常驻胶囊模式导航、稳定三栏比例、固定时间线、侧栏独立滚动、两模式截图与完成报告;重新打包 v1.3.1 DMG 并更新 SHA256。阶段二等待确认。
 - 2026-08-11:完成 UI 重构阶段二——精确视觉 token、统一控件与卡片、模板卡片类型/时长、全检查器折叠分组、对比度和最小窗口验证;重新打包 v1.3.1 DMG 并更新 SHA256。阶段三等待确认。
 - 2026-08-11:完成 UI 重构阶段三——模板快速编辑/预览/导出、组件拖入落点、可拖动效关键点、固定检查器动作区和长文本/最小窗口稳定性;重新打包 v1.3.1 DMG 并更新 SHA256。三阶段 UI 重构完成,等待最终验收。
+- 2026-08-11:完成阶段三实测问题修订——模组底色/透明度、播放控制、分辨率逻辑、紧凑属性、拖放式动效库、统一时间线和可自定义快捷键;重新打包 v1.3.1 DMG,更新完整性清单与 SHA256,全部自动检查和真实导出验证通过。

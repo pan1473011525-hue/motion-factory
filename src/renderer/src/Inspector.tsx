@@ -9,6 +9,7 @@ import {useRef, useState} from "react";
 import {ArrowDown, ArrowUp, X} from "lucide-react";
 import {parseCsv} from "./csv";
 import {InspectorGroup} from "./InspectorGroup";
+import {RangeNumberControl} from "./PropertyControls";
 
 const sectionLabels: Record<InspectorSection, string> = {
   content: "内容",
@@ -183,7 +184,7 @@ export const FieldControl: React.FC<{
     return <input className="switch-control" type="checkbox" checked={value === true} onChange={(event) => onChange(event.target.checked)} />;
   }
   if (field.control === "number") {
-    return <input type="number" value={typeof value === "number" ? value : 0} min={field.min} max={field.max} step={field.step ?? 1} onChange={(event) => onChange(event.target.valueAsNumber || 0)} />;
+    return <RangeNumberControl ariaLabel={field.label} value={typeof value === "number" ? value : 0} min={field.min ?? -1_000_000} max={field.max ?? 1_000_000} step={field.step ?? 1} unit={field.unit} showSlider={field.min !== undefined && field.max !== undefined} onChange={onChange} />;
   }
   if (field.control === "textarea") {
     return <textarea value={String(value ?? "")} maxLength={field.maxLength} rows={field.rows ?? 4} placeholder={field.placeholder} onChange={(event) => onChange(event.target.value)} />;
