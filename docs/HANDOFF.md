@@ -118,13 +118,18 @@
 - 所有具有已知默认值的滑块支持双击重置，覆盖模板 manifest 参数、组件默认参数、时间、变换、动效、模组外观与预览播放头；新增菜单几何边界单测。
 - 方案固定于 `docs/UI_UX_REFINEMENT_EXECUTION_PLAN_V3.md`。真实 Electron 已验证焦点隔离、菜单居中、重命名、紧凑检查器、动效动作区、滑块重置和退出取消；`pnpm check` 30 文件/84 测试、`test:exports` 五类输出、打包应用三段/75 帧 E2E、8 项离线完整性及 `hdiutil verify` 均通过。
 
+### 15. 导出队列与退出弹窗补漏(2026-08-12)
+- 导出队列将“在 Finder 显示”和“清除记录”统一为 32px 标准按钮并收进标题右侧操作组，Finder 在左、清除在右；条目内不再重复显示 Finder 动作，标题按钮始终定位最新一条已完成输出。
+- 退出弹窗三个动作采用等分宽度和相同高度。弹窗不可点击的根因是自由编排透明画布层 `z-index: 40000` 高于模态层 `90`，现将应用模态层提升到 `50000` 并显式接管指针事件。
+- 真实 Electron 已分别点击验证“取消退出”“在 Finder 显示”“清除记录”；`pnpm check` 30 文件/84 测试、`test:exports` 五类输出、打包应用三段/75 帧 E2E、8 项离线完整性及 `hdiutil verify` 全部通过。
+
 ---
 
 ## 三、当前项目状态
 
 - **版本**:1.3.1(应用版本号未随功能递增;如需发版请先更新 `package.json` version 与 README)。
 - **测试**:`pnpm check` 全绿 —— 30 个测试文件 / 84 项测试(lint + tsc + vitest)。
-- **构建产物**:`release/Motioner-1.3.1-arm64.dmg`(274,255,266 bytes,约 261.5 MiB)+ `Motioner-integrity.json` + `SHA256SUMS.txt`;当前 DMG SHA256:`3a7c9f4c58cbb33b095a26fa9e944f5d0ac9b90ac2a77961b3d5f1cf35309901`。
+- **构建产物**:`release/Motioner-1.3.1-arm64.dmg`(274,255,680 bytes,约 261.5 MiB)+ `Motioner-integrity.json` + `SHA256SUMS.txt`;当前 DMG SHA256:`8f022274ac8d94a67b1d1898a7545eda7562df5153fe5b0d50cd0aad88ae10c6`。
 - **Git**:方向 9、UI 重构阶段一/二/三及阶段三实测修订均已实现;`docs/CODEX_HANDOFF_PROMPT.md`、`docs/design-reference/`、`docs/ui-redesign-plan.md` 为本轮开始前已存在的未跟踪用户资料,未纳入提交。
 - **新增依赖**:`@remotion/media`、`@remotion/media-utils`、`@remotion/animation-utils`(均 4.0.507)、`lucide-react`(1.30.0),均已入 `package.json` 与 lock。
 
@@ -193,3 +198,4 @@ pnpm package:dmg      # 完整打包:build + electron-builder + verify + package
 - 2026-08-11:完成阶段三实测问题修订——模组底色/透明度、播放控制、分辨率逻辑、紧凑属性、拖放式动效库、统一时间线和可自定义快捷键;重新打包 v1.3.1 DMG,更新完整性清单与 SHA256,全部自动检查和真实导出验证通过。
 - 2026-08-11:完成阶段三实测问题修订（二）——8 秒静默恢复与 dirty 退出询问、全应用统一下拉、纯数字输入与紧凑变换区、模板强制演示、时间线条选中和重复运输控件清理；实施范围与验收固定于 `docs/UI_UX_REFINEMENT_EXECUTION_PLAN_V2.md`。
 - 2026-08-11:完成阶段三实测问题修订（三）——顶栏焦点隔离与控件统一、内容自适应下拉、紧凑右栏与动效动作区、品牌精简、项目重命名、应用内退出弹窗、全局悬停提示及滑块双击重置；重新打包 v1.3.1 DMG，更新完整性清单与 SHA256，实施范围固定于 `docs/UI_UX_REFINEMENT_EXECUTION_PLAN_V3.md`。
+- 2026-08-12:补齐导出队列标准动作与退出弹窗——Finder/清除记录同组排列、退出三按钮等宽，并修复透明画布层截获模态点击；重新打包 v1.3.1 DMG，更新完整性清单与 SHA256。
