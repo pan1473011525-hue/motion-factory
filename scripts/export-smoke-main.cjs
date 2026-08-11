@@ -1,6 +1,6 @@
 const {randomUUID} = require("node:crypto");
 const {spawnSync} = require("node:child_process");
-const {existsSync, mkdirSync, readdirSync, writeFileSync} = require("node:fs");
+const {existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync} = require("node:fs");
 const {join} = require("node:path");
 const {app, utilityProcess} = require("electron");
 
@@ -64,7 +64,8 @@ const makeProject = (scenario) => ({
   editorMode: scenario.editorMode ?? "template",
   composition: scenario.composition ?? {backgroundColor: "transparent", snapToGrid: true, gridSize: 0.025, nodes: []},
   exportPresetId: scenario.presetId,
-  exportOptions: {conflictPolicy: "version"},
+  segments: scenario.segments ?? [],
+  exportOptions: {conflictPolicy: "version", segmented: scenario.segmented ?? false},
   updatedAt: new Date().toISOString(),
 });
 
@@ -202,6 +203,16 @@ const run = async () => {
     {name: "Smoke-prores-4444-xq", presetId: "prores-4444-xq", fileName: "prores-4444-xq.mov"},
     {name: "Smoke-png-sequence", presetId: "png-sequence", fileName: "png-sequence"},
     {name: "Smoke-h264-review", presetId: "h264-review", fileName: "review.mp4"},
+    {
+      name: "Smoke-h264-segments",
+      presetId: "h264-review",
+      fileName: "review-segments",
+      segmented: true,
+      segments: [
+        {id: randomUUID(), label: "段 2", frame: 20},
+        {id: randomUUID(), label: "收尾", frame: 40},
+      ],
+    },
   ];
   const results = [];
 
@@ -277,6 +288,17 @@ const run = async () => {
         project: makeProject(scenario),
       });
     });
+    if (scenario.segmented) {
+      const sectionsPath = join(outputLocation, "sections.json");
+      if (!existsSync(sectionsPath)) throw new Error("分段导出没有生成 sections.json");
+      const sections = JSON.parse(readFileSync(sectionsPath, "utf8"));
+      if (sections.segments?.length !== 3) throw new Error(`分段数量错误：${JSON.stringify(sections)}`);
+      for (const section of sections.segments) {
+        if (!existsSync(join(outputLocation, section.fileName)) || section.nb_frames !== section.frameCount) {
+          throw new Error(`分段文件或帧数错误：${JSON.stringify(section)}`);
+        }
+      }
+    }
     results.push({presetId, outputLocation, validation: terminal.validation});
     console.log(`[${presetId}] PASS ${terminal.validation.summary}`);
   }

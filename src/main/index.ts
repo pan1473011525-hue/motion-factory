@@ -89,6 +89,13 @@ const getOutputSuffix = (presetId: MotionProject["exportPresetId"]): string => {
   return "review";
 };
 
+const usesSegmentedOutput = (project: MotionProject): boolean => {
+  const preset = getExportPreset(project.exportPresetId);
+  return preset.kind === "video"
+    && project.exportOptions.segmented
+    && project.segments.some((segment) => segment.frame > 0 && segment.frame < project.canvas.durationInFrames);
+};
+
 const prepareProjectForRender = (input: MotionProject): QueuedRenderJob["project"] => {
   const project = upgradeProjectTemplate(input);
   const fps = getFrameRate(project.canvas.fps);
@@ -631,16 +638,19 @@ ipcMain.handle("render:start", async (_event, rawRequest): Promise<StartRenderRe
     ? basename(currentProjectPath, extname(currentProjectPath))
     : project.name || "Motioner-导出";
   const suffix = getOutputSuffix(preset.id);
-  const defaultName = `${baseName}-${suffix}${preset.extension ? `.${preset.extension}` : ""}`;
+  const segmented = usesSegmentedOutput(project);
+  const defaultName = segmented
+    ? `${baseName}-${suffix}-segments`
+    : `${baseName}-${suffix}${preset.extension ? `.${preset.extension}` : ""}`;
   const defaultPath = currentProjectPath
     ? join(dirname(currentProjectPath), defaultName)
     : defaultName;
   const result = await dialog.showSaveDialog(mainWindow!, {
-    title: preset.kind === "image-sequence" ? "选择 PNG 序列文件夹" : `导出 ${preset.label}`,
+    title: segmented ? `选择 ${preset.label} 分段输出文件夹` : preset.kind === "image-sequence" ? "选择 PNG 序列文件夹" : `导出 ${preset.label}`,
     defaultPath,
-    ...(preset.extension
+    ...(preset.extension && !segmented
       ? {filters: [{name: preset.shortLabel, extensions: [preset.extension]}]}
-      : {buttonLabel: "选择文件夹"}),
+      : {buttonLabel: segmented ? "导出分段" : "选择文件夹"}),
   });
 
   if (result.canceled || !result.filePath) {
@@ -682,7 +692,9 @@ ipcMain.handle("render:start-batch", async (_event, rawRequest): Promise<StartBa
   const jobs = projects.map((project, index) => {
     const preset = getExportPreset(project.exportPresetId);
     const prefix = String(index + 1).padStart(3, "0");
-    const fileName = `${prefix}-${safeFileStem(project.name)}-${getOutputSuffix(preset.id)}${preset.extension ? `.${preset.extension}` : ""}`;
+    const fileName = usesSegmentedOutput(project)
+      ? `${prefix}-${safeFileStem(project.name)}-${getOutputSuffix(preset.id)}-segments`
+      : `${prefix}-${safeFileStem(project.name)}-${getOutputSuffix(preset.id)}${preset.extension ? `.${preset.extension}` : ""}`;
     return enqueuePreparedRender(project, join(batchDirectory, fileName));
   });
   dispatchNextRender();
@@ -727,7 +739,11 @@ const runPackagedE2E = async (outputLocation: string): Promise<void> => {
     name: "Motioner Packaged E2E",
     canvas: {...base.canvas, width: 640, height: 360, durationInFrames: 75},
     exportPresetId: "h264-review",
-    exportOptions: {conflictPolicy: "replace"},
+    exportOptions: {conflictPolicy: "replace", segmented: true},
+    segments: [
+      {id: randomUUID(), label: "段 2", frame: 25},
+      {id: randomUUID(), label: "片尾", frame: 50},
+    ],
   }));
   const queued = enqueuePreparedRender(project, outputLocation, true);
   packagedE2EJobId = queued.jobId;

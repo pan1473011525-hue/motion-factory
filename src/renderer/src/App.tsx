@@ -199,6 +199,8 @@ export const App: React.FC = () => {
   const renderError = project.editorMode === "composer" ? composerError : templateError ?? durationError ?? assetError;
   const canRender = !renderError;
   const selectedExportPreset = getExportPreset(project.exportPresetId);
+  const segmentedExportAvailable = selectedExportPreset.kind === "video" && project.segments.length > 0;
+  const segmentedExportEnabled = segmentedExportAvailable && project.exportOptions.segmented;
   const selectedFont = project.assets.find((asset) => asset.id === project.typography.fontAssetId && asset.kind === "font");
   const activeJobCount = renderJobs.filter((job) => job.status === "queued" || job.status === "rendering").length;
 
@@ -427,6 +429,15 @@ export const App: React.FC = () => {
           return {...node, timing: {from, durationInFrames: Math.max(1, Math.min(node.timing.durationInFrames, patch.durationInFrames! - from))}};
         }),
       },
+      timeSlots: patch.durationInFrames === undefined ? project.timeSlots : project.timeSlots.map((slot) => ({
+        ...slot,
+        frame: Math.min(slot.frame, Math.max(0, patch.durationInFrames! - 1)),
+      })),
+      segments: patch.durationInFrames === undefined ? project.segments : project.segments
+        .filter(() => patch.durationInFrames! > 1)
+        .map((segment) => ({...segment, frame: Math.min(segment.frame, patch.durationInFrames! - 1)}))
+        .filter((segment, index, all) => all.findIndex((candidate) => candidate.frame === segment.frame) === index)
+        .sort((a, b) => a.frame - b.frame),
     });
 
   const updateAnimation = (patch: Partial<MotionProject["animation"]>): void =>
@@ -541,9 +552,20 @@ export const App: React.FC = () => {
     if (project.segments.some((segment) => segment.frame === frame)) return;
     const next: Segment[] = [
       ...project.segments,
-      {id: globalThis.crypto.randomUUID(), label: `段 ${project.segments.length + 1}`, frame},
+      {id: globalThis.crypto.randomUUID(), label: `段 ${project.segments.length + 2}`, frame},
     ].sort((a, b) => a.frame - b.frame);
     markChanged({...project, segments: next});
+  };
+
+  const updateSegmentFrame = (segmentId: string, frame: number): void => {
+    const nextFrame = Math.max(1, Math.min(project.canvas.durationInFrames - 1, Math.round(frame)));
+    if (project.segments.some((segment) => segment.id !== segmentId && segment.frame === nextFrame)) return;
+    markChanged({
+      ...project,
+      segments: project.segments
+        .map((segment) => segment.id === segmentId ? {...segment, frame: nextFrame} : segment)
+        .sort((a, b) => a.frame - b.frame),
+    });
   };
 
   const removeSegment = (segmentId: string): void => {
@@ -942,7 +964,7 @@ export const App: React.FC = () => {
           onExportPresetChange={(presetId) => markChanged({...project, exportPresetId: presetId})}
         />
         <button type="button" className="export-button" title={renderError ?? selectedExportPreset.description} onClick={() => void startRender()} disabled={!canRender}>
-          {activeJobCount > 0 ? `加入队列 · ${selectedExportPreset.shortLabel}` : `导出 · ${selectedExportPreset.shortLabel}`}
+          {activeJobCount > 0 ? `加入队列 · ${selectedExportPreset.shortLabel}` : segmentedExportEnabled ? `分段导出 · ${selectedExportPreset.shortLabel}` : `导出 · ${selectedExportPreset.shortLabel}`}
         </button>
       </header>
 
@@ -1004,7 +1026,7 @@ export const App: React.FC = () => {
             <div className={`timeline-track mode-${manifest.durationMode}`} aria-label={`${manifest.durationMode} 时长模式`}><span className="timeline-intro" /><span className="timeline-hold" /><span className="timeline-outro" /></div>
             <span>{formatTimecode(project.canvas.durationInFrames - 1, project.canvas.fps)}</span>
             <span>{currentFrame + 1} / {project.canvas.durationInFrames} 帧</span>
-          </div> : <ComposerTimeline composition={composerScene} selectedNodeId={selectedNodeId} multiSelectedIds={multiSelectedIds} timeSlots={project.timeSlots} currentFrame={currentFrame} durationInFrames={project.canvas.durationInFrames} fps={project.canvas.fps} isPlaying={isPlaying} onTogglePlayback={togglePlayback} onSelect={selectNodeExtend} onPreview={setComposerPreview} onCommit={commitComposition} onValidate={(scene) => validateComposerComposition(scene, project.assets, project.canvas.durationInFrames) === null} onDelete={deleteSelectedNode} onDeleteRipple={deleteSelectedNodesRipple} onDuplicate={duplicateSelectedNode} onMoveLayer={moveSelectedLayer} onSeekStart={beginTimelineScrub} onSeek={seekTimelineFrame} onSeekEnd={endTimelineScrub} onApplyMotion={applyMotionPresetToNode} onAddTimeSlot={addTimeSlot} onUpdateTimeSlotFrame={updateTimeSlotFrame} onRemoveTimeSlot={removeTimeSlot} segments={project.segments} onAddSegment={addSegment} onRemoveSegment={removeSegment} />}
+          </div> : <ComposerTimeline composition={composerScene} selectedNodeId={selectedNodeId} multiSelectedIds={multiSelectedIds} timeSlots={project.timeSlots} currentFrame={currentFrame} durationInFrames={project.canvas.durationInFrames} fps={project.canvas.fps} isPlaying={isPlaying} onTogglePlayback={togglePlayback} onSelect={selectNodeExtend} onPreview={setComposerPreview} onCommit={commitComposition} onValidate={(scene) => validateComposerComposition(scene, project.assets, project.canvas.durationInFrames) === null} onDelete={deleteSelectedNode} onDeleteRipple={deleteSelectedNodesRipple} onDuplicate={duplicateSelectedNode} onMoveLayer={moveSelectedLayer} onSeekStart={beginTimelineScrub} onSeek={seekTimelineFrame} onSeekEnd={endTimelineScrub} onApplyMotion={applyMotionPresetToNode} onAddTimeSlot={addTimeSlot} onUpdateTimeSlotFrame={updateTimeSlotFrame} onRemoveTimeSlot={removeTimeSlot} segments={project.segments} onAddSegment={addSegment} onUpdateSegmentFrame={updateSegmentFrame} onRemoveSegment={removeSegment} />}
         </section>
 
         <aside className="inspector-panel" aria-label="参数检查器">
@@ -1026,8 +1048,9 @@ export const App: React.FC = () => {
             <label className="field"><span>帧率</span><select value={frameRateKey(project.canvas.fps)} onChange={(event) => changeFrameRate(event.target.value)}>{FRAME_RATE_PRESETS.map((preset) => <option key={frameRateKey(preset.value)} value={frameRateKey(preset.value)}>{preset.label} fps</option>)}</select></label>
             <DurationInput seconds={durationSeconds} frames={project.canvas.durationInFrames} onCommit={(seconds) => updateCanvas({durationInFrames: secondsToFrames(seconds, project.canvas.fps)})} />
             <label className="field"><span>导出格式</span><select value={project.exportPresetId} onChange={(event) => markChanged({...project, exportPresetId: getExportPreset(event.target.value).id})}>{EXPORT_PRESETS.map((preset) => <option key={preset.id} value={preset.id}>{preset.label}</option>)}</select><small className="field-help">{selectedExportPreset.description}</small></label>
-            <label className="field"><span>目标重名时</span><select value={project.exportOptions.conflictPolicy} onChange={(event) => markChanged({...project, exportOptions: {conflictPolicy: event.target.value as MotionProject["exportOptions"]["conflictPolicy"]}})}><option value="version">自动追加版本号</option><option value="replace">验证成功后替换</option><option value="skip">跳过，不生成</option></select></label>
-            <dl className="output-summary"><div><dt>色彩空间</dt><dd>Rec.709 SDR</dd></div><div><dt>透明通道</dt><dd>{selectedExportPreset.alpha ? "保留" : "不包含（深色审看底）"}</dd></div><div><dt>预计空间</dt><dd>约 {formatBytes(estimateExportBytes(project, selectedExportPreset.id))}</dd></div></dl>
+            <label className="field inline-switch"><span>分段导出</span><input className="switch-control" type="checkbox" checked={project.exportOptions.segmented} disabled={!segmentedExportAvailable} onChange={(event) => markChanged({...project, exportOptions: {...project.exportOptions, segmented: event.target.checked}})} /><small className="field-help">{selectedExportPreset.kind !== "video" ? "仅视频格式支持多文件分段导出" : project.segments.length === 0 ? "先在时间线播放头位置添加分段点" : `将输出 ${project.segments.length + 1} 个视频和 sections.json`}</small></label>
+            <label className="field"><span>目标重名时</span><select value={project.exportOptions.conflictPolicy} onChange={(event) => markChanged({...project, exportOptions: {...project.exportOptions, conflictPolicy: event.target.value as MotionProject["exportOptions"]["conflictPolicy"]}})}><option value="version">自动追加版本号</option><option value="replace">验证成功后替换</option><option value="skip">跳过，不生成</option></select></label>
+            <dl className="output-summary"><div><dt>色彩空间</dt><dd>Rec.709 SDR</dd></div><div><dt>透明通道</dt><dd>{selectedExportPreset.alpha ? "保留" : "不包含（深色审看底）"}</dd></div><div><dt>输出</dt><dd>{segmentedExportEnabled ? `${project.segments.length + 1} 个分段文件` : "1 个完整文件"}</dd></div><div><dt>预计空间</dt><dd>约 {formatBytes(estimateExportBytes(project, selectedExportPreset.id))}</dd></div></dl>
           </section>
         </aside>
       </main>

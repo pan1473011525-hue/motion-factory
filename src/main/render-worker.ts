@@ -19,6 +19,12 @@ import type {
 } from "../shared/contracts";
 import {getExportPreset, type ExportPresetId} from "../shared/export-presets";
 import {buildLottieExport} from "../shared/lottie-export";
+import {
+  buildSectionRanges,
+  buildSectionsDocument,
+  getSectionFileName,
+  type SectionArtifact,
+} from "../shared/section-export";
 
 const parentPort = process.parentPort;
 
@@ -163,6 +169,7 @@ const validateVideoOutput = async (
   message: RenderWorkerStartMessage,
   presetId: ExportPresetId,
   onChild: (child: ChildProcessWithoutNullStreams | null) => void,
+  expectedFrames = message.project.canvas.durationInFrames,
 ): Promise<ExportValidation> => {
   const directory = message.binariesDirectory;
   if (!directory) {
@@ -198,7 +205,7 @@ const validateVideoOutput = async (
   const pixelFormat = video.pix_fmt ?? null;
   const dimensionsMatch = video.width === message.project.canvas.width && video.height === message.project.canvas.height;
   const frameRateMatches = Math.abs(actualFps - expectedFps) < 0.01;
-  const frameCountMatches = frames === message.project.canvas.durationInFrames;
+  const frameCountMatches = frames === expectedFrames;
   const codecMatches = presetId === "h264-review" ? codec === "h264" : codec === "prores";
   const profileMatches = presetId === "prores-4444"
     ? profile === "4"
@@ -335,6 +342,21 @@ const validateLottieOutput = async (message: RenderWorkerStartMessage): Promise<
   };
 };
 
+const aggregateSectionValidations = (validations: ReadonlyArray<ExportValidation>): ExportValidation => {
+  const first = validations[0];
+  if (!first || validations.some((validation) => !validation.ok)) {
+    throw new Error("分段导出校验失败：没有可用的分段结果");
+  }
+  const frames = validations.reduce((total, validation) => total + validation.frames, 0);
+  const fileSizeBytes = validations.reduce((total, validation) => total + validation.fileSizeBytes, 0);
+  return {
+    ...first,
+    summary: `${first.codec} · ${validations.length} 段 · ${first.width}×${first.height} · ${first.fps.toFixed(3)} fps · ${frames} 帧`,
+    frames,
+    fileSizeBytes,
+  };
+};
+
 const promoteOutput = async (
   temporaryPath: string,
   finalPath: string,
@@ -373,12 +395,21 @@ const runRender = async (message: RenderWorkerStartMessage): Promise<void> => {
   let assetServer: Server | null = null;
   const preset = getExportPreset(message.project.exportPresetId);
   const finalOutputLocation = message.outputLocation;
+  const sectionRanges = buildSectionRanges(
+    message.project.segments ?? [],
+    message.project.canvas.durationInFrames,
+    message.project.canvas.fps,
+  );
+  const isSegmentedVideo = preset.kind === "video"
+    && message.project.exportOptions.segmented
+    && sectionRanges.length > 1;
   const extension = extname(finalOutputLocation);
   const stem = basename(finalOutputLocation, extension);
-  const temporaryOutputLocation = preset.kind === "image-sequence"
+  const temporaryOutputLocation = preset.kind === "image-sequence" || isSegmentedVideo
     ? join(dirname(finalOutputLocation), `.${basename(finalOutputLocation)}.motioner-${message.jobId}`)
     : join(dirname(finalOutputLocation), `.${stem}.motioner-${message.jobId}.partial${extension}`);
   const workingMessage: RenderWorkerStartMessage = {...message, outputLocation: temporaryOutputLocation};
+  const sectionArtifacts: SectionArtifact<ExportValidation>[] = [];
   let promoted = false;
   try {
     emit({
@@ -466,39 +497,82 @@ const runRender = async (message: RenderWorkerStartMessage): Promise<void> => {
       });
     } else {
       const isReview = preset.id === "h264-review";
-      await renderMedia({
-        composition: renderComposition,
-        serveUrl: message.serveUrl,
-        codec: isReview ? "h264" : "prores",
-        ...(isReview
-          ? {imageFormat: "png" as const, pixelFormat: "yuv420p" as const, crf: 18, x264Preset: "medium" as const}
-          : {imageFormat: "png" as const, pixelFormat: "yuva444p10le" as const, proResProfile: preset.id === "prores-4444-xq" ? "4444-xq" as const : "4444" as const}),
-        outputLocation: temporaryOutputLocation,
-        inputProps: runtimeInputProps,
-        overwrite: true,
-        muted: true,
-        concurrency: "50%",
-        offthreadVideoCacheSizeInBytes: 512 * 1024 * 1024,
-        cancelSignal,
-        browserExecutable: message.browserExecutable ?? undefined,
-        binariesDirectory: message.binariesDirectory,
-        logLevel: "warn",
-        colorSpace: "bt709",
-        onProgress: (progress) => {
-          emit({
-            type: "progress",
-            jobId: message.jobId,
-            progress: progress.progress,
-            renderedFrames: progress.renderedFrames,
-            encodedFrames: progress.encodedFrames,
-            stage: progress.stitchStage === "encoding" ? "encoding" : "rendering",
-          });
-        },
-      });
+      const renderVideoRange = async (
+        outputLocation: string,
+        frameRange: [number, number] | null,
+        completedFrames: number,
+        rangeFrameCount: number,
+      ): Promise<void> => {
+        await renderMedia({
+          composition: renderComposition,
+          serveUrl: message.serveUrl,
+          codec: isReview ? "h264" : "prores",
+          ...(isReview
+            ? {imageFormat: "png" as const, pixelFormat: "yuv420p" as const, crf: 18, x264Preset: "medium" as const}
+            : {imageFormat: "png" as const, pixelFormat: "yuva444p10le" as const, proResProfile: preset.id === "prores-4444-xq" ? "4444-xq" as const : "4444" as const}),
+          outputLocation,
+          inputProps: runtimeInputProps,
+          ...(frameRange ? {frameRange} : {}),
+          overwrite: true,
+          muted: true,
+          concurrency: "50%",
+          offthreadVideoCacheSizeInBytes: 512 * 1024 * 1024,
+          cancelSignal,
+          browserExecutable: message.browserExecutable ?? undefined,
+          binariesDirectory: message.binariesDirectory,
+          logLevel: "warn",
+          colorSpace: "bt709",
+          onProgress: (progress) => {
+            const renderedFrames = completedFrames + Math.min(rangeFrameCount, progress.renderedFrames);
+            const encodedFrames = completedFrames + Math.min(rangeFrameCount, progress.encodedFrames);
+            emit({
+              type: "progress",
+              jobId: message.jobId,
+              progress: Math.min(1, (completedFrames + progress.progress * rangeFrameCount) / message.project.canvas.durationInFrames),
+              renderedFrames,
+              encodedFrames,
+              stage: progress.stitchStage === "encoding" ? "encoding" : "rendering",
+            });
+          },
+        });
+      };
+
+      if (isSegmentedVideo) {
+        await mkdir(temporaryOutputLocation, {recursive: true});
+        let completedFrames = 0;
+        for (const [index, section] of sectionRanges.entries()) {
+          if (cancelledJobs.has(message.jobId)) throw new Error("导出已取消");
+          const fileName = getSectionFileName(section, index, preset.extension ?? "mov");
+          const outputLocation = join(temporaryOutputLocation, fileName);
+          await renderVideoRange(
+            outputLocation,
+            [section.fromFrame, section.toFrame],
+            completedFrames,
+            section.frameCount,
+          );
+          const sectionMessage = {...workingMessage, outputLocation};
+          await ensureRec709Metadata(sectionMessage, preset.id, (child) => { validationChild = child; });
+          const validation = await validateVideoOutput(
+            sectionMessage,
+            preset.id,
+            (child) => { validationChild = child; },
+            section.frameCount,
+          );
+          sectionArtifacts.push({section, fileName, validation});
+          completedFrames += section.frameCount;
+        }
+      } else {
+        await renderVideoRange(
+          temporaryOutputLocation,
+          null,
+          0,
+          message.project.canvas.durationInFrames,
+        );
+      }
     }
 
     if (cancelledJobs.has(message.jobId)) throw new Error("导出已取消");
-    if (preset.kind === "video") {
+    if (preset.kind === "video" && !isSegmentedVideo) {
       await ensureRec709Metadata(workingMessage, preset.id, (child) => { validationChild = child; });
     }
     emit({
@@ -509,23 +583,18 @@ const runRender = async (message: RenderWorkerStartMessage): Promise<void> => {
       encodedFrames: preset.kind === "video" ? message.project.canvas.durationInFrames : 0,
       stage: "validating",
     });
-    const validation = preset.kind === "image-sequence"
-      ? await validatePngSequence(workingMessage)
-      : preset.kind === "lottie"
-        ? await validateLottieOutput(workingMessage)
-        : await validateVideoOutput(workingMessage, preset.id, (child) => { validationChild = child; });
+    const validation = isSegmentedVideo
+      ? aggregateSectionValidations(sectionArtifacts.map((artifact) => artifact.validation))
+      : preset.kind === "image-sequence"
+        ? await validatePngSequence(workingMessage)
+        : preset.kind === "lottie"
+          ? await validateLottieOutput(workingMessage)
+          : await validateVideoOutput(workingMessage, preset.id, (child) => { validationChild = child; });
 
-    if (preset.kind === "image-sequence" && existsSync(finalOutputLocation) && !message.overwriteExisting) {
-      await rmdir(finalOutputLocation);
-    }
-    await promoteOutput(temporaryOutputLocation, finalOutputLocation, message.overwriteExisting, message.jobId);
-    promoted = true;
-    const reportPath = preset.kind === "image-sequence"
-      ? join(finalOutputLocation, "motioner-export-report.json")
-      : `${finalOutputLocation}.motioner.json`;
-    await writeFile(reportPath, `${JSON.stringify({
+    const exportedAt = new Date().toISOString();
+    const report = `${JSON.stringify({
       application: "Motioner",
-      exportedAt: new Date().toISOString(),
+      exportedAt,
       jobId: message.jobId,
       projectId: message.project.id,
       projectName: message.project.name,
@@ -533,27 +602,50 @@ const runRender = async (message: RenderWorkerStartMessage): Promise<void> => {
       presetId: preset.id,
       canvas: message.project.canvas,
       outputLocation: finalOutputLocation,
+      segmented: isSegmentedVideo,
+      sectionCount: isSegmentedVideo ? sectionArtifacts.length : undefined,
       validation,
-    }, null, 2)}\n`, "utf8");
+    }, null, 2)}\n`;
 
-    // 分段元数据:有分段点时输出 sections.json,供下游剪辑/合成管线自动化消费。
-    if (preset.kind === "video" && (message.project.segments ?? []).length > 0) {
-      const fps = message.project.canvas.fps.numerator / message.project.canvas.fps.denominator;
-      const bounds = [0, ...(message.project.segments ?? []).map((segment) => segment.frame).filter((frame) => frame > 0 && frame < message.project.canvas.durationInFrames), message.project.canvas.durationInFrames];
-      const uniqueBounds = [...new Set(bounds)].sort((a, b) => a - b);
-      const segments = uniqueBounds.slice(0, -1).map((from, index) => {
-        const to = uniqueBounds[index + 1];
-        return {
-          label: `段 ${index + 1}`,
-          fromFrame: from,
-          toFrame: to - 1,
-          frameCount: to - from,
-          durationSeconds: Math.round((to - from) / fps * 1000) / 1000,
-        };
+    if (isSegmentedVideo) {
+      const sectionsDocument = buildSectionsDocument({
+        exportedAt,
+        jobId: message.jobId,
+        projectId: message.project.id,
+        projectName: message.project.name,
+        fps: message.project.canvas.fps,
+        width: message.project.canvas.width,
+        height: message.project.canvas.height,
+        colorSpace: validation.colorSpace,
+        artifacts: sectionArtifacts,
       });
+      await writeFile(join(temporaryOutputLocation, "motioner-export-report.json"), report, "utf8");
+      await writeFile(
+        join(temporaryOutputLocation, "sections.json"),
+        `${JSON.stringify(sectionsDocument, null, 2)}\n`,
+        "utf8",
+      );
+    }
+
+    if (preset.kind === "image-sequence" && existsSync(finalOutputLocation) && !message.overwriteExisting) {
+      await rmdir(finalOutputLocation);
+    }
+    await promoteOutput(temporaryOutputLocation, finalOutputLocation, message.overwriteExisting, message.jobId);
+    promoted = true;
+
+    if (!isSegmentedVideo) {
+      const reportPath = preset.kind === "image-sequence"
+        ? join(finalOutputLocation, "motioner-export-report.json")
+        : `${finalOutputLocation}.motioner.json`;
+      await writeFile(reportPath, report, "utf8");
+    }
+
+    if (!isSegmentedVideo && preset.kind === "video" && sectionRanges.length > 1) {
+      // 未开启多文件导出时仍保留整片 sidecar，兼容既有下游工作流。
+      const fps = message.project.canvas.fps.numerator / message.project.canvas.fps.denominator;
       await writeFile(`${finalOutputLocation}.sections.json`, `${JSON.stringify({
         application: "Motioner",
-        exportedAt: new Date().toISOString(),
+        exportedAt,
         jobId: message.jobId,
         projectId: message.project.id,
         canvas: message.project.canvas,
@@ -562,7 +654,7 @@ const runRender = async (message: RenderWorkerStartMessage): Promise<void> => {
         height: validation.height,
         fps,
         colorSpace: validation.colorSpace,
-        segments,
+        segments: sectionRanges,
       }, null, 2)}\n`, "utf8");
     }
 
@@ -593,7 +685,7 @@ const runRender = async (message: RenderWorkerStartMessage): Promise<void> => {
   } finally {
     assetServer?.close();
     if (!promoted && existsSync(temporaryOutputLocation)) {
-      if (preset.kind === "image-sequence") await rm(temporaryOutputLocation, {recursive: true, force: true});
+      if (preset.kind === "image-sequence" || isSegmentedVideo) await rm(temporaryOutputLocation, {recursive: true, force: true});
       else await unlink(temporaryOutputLocation).catch(() => undefined);
     }
     activeCancels.delete(message.jobId);

@@ -57,14 +57,21 @@
 - 高信息量按钮(导出/模式切换/入场退场循环/波纹删除/工作流)保留文字。新增 `.icon-btn` 统一样式。
 - `pnpm check` 21 文件/57 测试全绿,打包 + verify + e2e + hdiutil + 挂载内容验证全部通过。
 
+### 8. 方向 9 多文件分段导出 + 分段点拖拽(2026-08-11)
+- 输出规格新增「分段导出」开关(仅视频格式且存在分段点时可用)。开启后输出独立文件夹,按段生成 `01-段-1.*`、`02-段-2.*` 等视频,并附带 `sections.json` 与 `motioner-export-report.json`。
+- 每段使用 Remotion `frameRange` 独立渲染,逐段写入 Rec.709 元数据并执行 FFprobe 帧数/编码/尺寸/帧率/色彩校验及 FFmpeg 解码校验;所有产物完成后原子提升整个目录。未开启时保留原整片导出与 sidecar 行为。
+- `sections.json` 每段写入实际 `codec_name/width/height/avg_frame_rate/duration/nb_frames/fileSizeBytes` 与时间线边界;新增段边界/文件名/清单字段单测。
+- 时间线橙色分段点可拖拽调整,Alt 临时取消吸附;限制在首末帧之间并拒绝重合。缩短项目时长会同步收拢/去重分段点。
+- 验证:`pnpm check` 22 文件/61 测试;`test:exports` 实际导出 3 段 H.264;`package:dmg` 内的打包应用 E2E 实际导出 3 段/75 帧并核验清单;`hdiutil verify` 通过。
+
 ---
 
 ## 三、当前项目状态
 
 - **版本**:1.3.1(应用版本号未随功能递增;如需发版请先更新 `package.json` version 与 README)。
-- **测试**:`pnpm check` 全绿 —— 21 个测试文件 / 57 项测试(lint + tsc + vitest)。
-- **构建产物**:`release/Motioner-1.3.1-arm64.dmg`(259.8 MB)+ `Motioner-integrity.json` + `SHA256SUMS.txt`(每次打包后需重新计算 1.3.1 校验和)。
-- **Git**:6 个提交,工作区干净。提交历史见上(最近:`defc794`)。
+- **测试**:`pnpm check` 全绿 —— 22 个测试文件 / 61 项测试(lint + tsc + vitest)。
+- **构建产物**:`release/Motioner-1.3.1-arm64.dmg`(274,275,363 bytes,约 261.6 MiB)+ `Motioner-integrity.json` + `SHA256SUMS.txt`;当前 DMG SHA256:`993e517f4703ce864c140393fd2af88de165d1a21fcf3dd77185ac040b676bf9`。
+- **Git**:方向 9 后续实现见最新提交;`docs/CODEX_HANDOFF_PROMPT.md`、`docs/design-reference/`、`docs/ui-redesign-plan.md` 为本轮开始前已存在的未跟踪用户资料,未纳入提交。
 - **新增依赖**:`@remotion/media`、`@remotion/media-utils`、`@remotion/animation-utils`(均 4.0.507)、`lucide-react`(1.30.0),均已入 `package.json` 与 lock。
 
 ---
@@ -73,10 +80,9 @@
 
 1. **方向 6 模板消费时间槽**:让模板 schema 声明具名时刻并消费 `project.timeSlots`,需扩展 template-sdk 字段体系(新增「时间槽引用」控件类型)与模板运行时。当前时间槽数据已就绪。
 2. **方向 8 dotLottie 容器与回放预览**:`dotlottie-js` 打包 `.lottie`、lottie-web 回放 UI;`lottie-js` 对象模型重构序列化器(当前手写 JSON)。
-3. **方向 9 多文件分段导出**:按段输出多个视频文件(依赖 `frameRange` 多段区间渲染);分段点拖拽调整。
-4. **方向 10 静止段缓存**:帧缓存正确性风险高,按约定「缓存默认关闭、仅显式开启」暂缓。
-5. **Lottie 导出范围**:当前是可表达子集 POC(矩形/圆形/文字 + 基础动效),图片/视频/图表等图层会跳过并在导出报告提示;如需完整覆盖需扩展序列化器。
-6. **electron-builder 下载超时**:本机到 GitHub 网络波动,`package:dmg` 偶发 `Timeout awaiting 'request' for 600000ms`,重试(命中缓存)即成功;若频繁出现可设 `ELECTRON_MIRROR="https://npmmirror.com/mirrors/electron/"`。
+3. **方向 10 静止段缓存**:帧缓存正确性风险高,按约定「缓存默认关闭、仅显式开启」暂缓。
+4. **Lottie 导出范围**:当前是可表达子集 POC(矩形/圆形/文字 + 基础动效),图片/视频/图表等图层会跳过并在导出报告提示;如需完整覆盖需扩展序列化器。
+5. **electron-builder 下载超时**:本机到 GitHub 网络波动,`package:dmg` 偶发 `Timeout awaiting 'request' for 600000ms`,重试(命中缓存)即成功;若频繁出现可设 `ELECTRON_MIRROR="https://npmmirror.com/mirrors/electron/"`。
 
 ---
 
@@ -126,3 +132,4 @@ pnpm package:dmg      # 完整打包:build + electron-builder + verify + package
 
 - 2026-08-10:创建本文档。记录 Reasonix 接手 codex 之后(依赖恢复 → 打包交付 → 交互修复 → 十方向路线图 → 多轮打包与回归修复)的全部工作、当前状态与待办。
 - 2026-08-10:追加记录——界面按钮 lucide 图标化(提交 `fd86c51`),新增 `lucide-react` 依赖;DMG 挂载内容验证纳入交付检查清单。
+- 2026-08-11:完成方向 9 后续——多文件分段导出、分段点拖拽、逐段真实媒体校验、`sections.json` 单测与打包应用 E2E;重新交付 v1.3.1 DMG 并更新 SHA256。

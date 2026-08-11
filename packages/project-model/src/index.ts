@@ -51,6 +51,7 @@ export const projectTypographySchema = z.object({
 
 export const projectExportOptionsSchema = z.object({
   conflictPolicy: z.enum(["version", "replace", "skip"]),
+  segmented: z.boolean().default(false),
 });
 
 export const composerComponentIdSchema = z.enum([
@@ -175,7 +176,7 @@ export const motionProjectSchema = z.object({
   assets: z.array(projectAssetSchema),
   animation: projectAnimationSchema.default({speed: 1, reducedMotion: false, edgeFrames: 18}),
   typography: projectTypographySchema.default({fontAssetId: "", fallbackFamily: "system"}),
-  exportOptions: projectExportOptionsSchema.default({conflictPolicy: "version"}),
+  exportOptions: projectExportOptionsSchema.default({conflictPolicy: "version", segmented: false}),
   editorMode: z.enum(["template", "composer"]).default("template"),
   composition: composerCompositionSchema.default(createEmptyComposerComposition),
   timeSlots: z.array(timeSlotSchema).default([]),
@@ -197,7 +198,7 @@ const legacyMotionProjectSchema = z.object({
   assets: z.array(projectAssetSchema),
   animation: projectAnimationSchema.default({speed: 1, reducedMotion: false, edgeFrames: 18}),
   typography: projectTypographySchema.default({fontAssetId: "", fallbackFamily: "system"}),
-  exportOptions: projectExportOptionsSchema.default({conflictPolicy: "version"}),
+  exportOptions: projectExportOptionsSchema.default({conflictPolicy: "version", segmented: false}),
   exportPresetId: exportPresetIdSchema,
   updatedAt: z.string().datetime({offset: true}),
 });
@@ -269,7 +270,7 @@ export const createMotionProject = (
     assets: [],
     animation: {speed: 1, reducedMotion: false, edgeFrames: 18},
     typography: {fontAssetId: "", fallbackFamily: "system"},
-    exportOptions: {conflictPolicy: "version"},
+    exportOptions: {conflictPolicy: "version", segmented: false},
     editorMode: "template",
     composition: createEmptyComposerComposition(),
     exportPresetId: "prores-4444",

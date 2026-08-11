@@ -58,7 +58,16 @@ describe("motion project model", () => {
     delete json.exportOptions;
     const parsed = parseMotionProjectJson(JSON.stringify(json));
     expect(parsed.typography).toEqual({fontAssetId: "", fallbackFamily: "system"});
-    expect(parsed.exportOptions).toEqual({conflictPolicy: "version"});
+    expect(parsed.exportOptions).toEqual({conflictPolicy: "version", segmented: false});
+  });
+
+  it("adds the segmented export default to existing v2 projects", () => {
+    const json = JSON.parse(serializeMotionProject(createFixture())) as Record<string, unknown>;
+    json.exportOptions = {conflictPolicy: "replace"};
+    expect(parseMotionProjectJson(JSON.stringify(json)).exportOptions).toEqual({
+      conflictPolicy: "replace",
+      segmented: false,
+    });
   });
 
   it("migrates v1 projects into compatible template mode", () => {

@@ -57,7 +57,15 @@ type SlotPointer = {
   trackWidth: number;
 };
 
-type TimelinePointer = TimingPointer | ScrubPointer | SlotPointer;
+type SegmentPointer = {
+  kind: "segment";
+  pointerId: number;
+  segmentId: string;
+  trackLeft: number;
+  trackWidth: number;
+};
+
+type TimelinePointer = TimingPointer | ScrubPointer | SlotPointer | SegmentPointer;
 
 type MotionDropState = {
   nodeId: string;
@@ -109,8 +117,9 @@ export const ComposerTimeline: React.FC<{
   onUpdateTimeSlotFrame?: (slotId: string, frame: number) => void;
   onRemoveTimeSlot?: (slotId: string) => void;
   onAddSegment?: () => void;
+  onUpdateSegmentFrame?: (segmentId: string, frame: number) => void;
   onRemoveSegment?: (segmentId: string) => void;
-}> = ({composition, selectedNodeId, multiSelectedIds = [], timeSlots = [], segments = [], currentFrame, durationInFrames, fps, isPlaying, onTogglePlayback, onSelect, onPreview, onCommit, onValidate, onDelete, onDeleteRipple, onDuplicate, onMoveLayer, onSeekStart, onSeek, onSeekEnd, onApplyMotion, onAddTimeSlot, onUpdateTimeSlotFrame, onRemoveTimeSlot, onAddSegment, onRemoveSegment}) => {
+}> = ({composition, selectedNodeId, multiSelectedIds = [], timeSlots = [], segments = [], currentFrame, durationInFrames, fps, isPlaying, onTogglePlayback, onSelect, onPreview, onCommit, onValidate, onDelete, onDeleteRipple, onDuplicate, onMoveLayer, onSeekStart, onSeek, onSeekEnd, onApplyMotion, onAddTimeSlot, onUpdateTimeSlotFrame, onRemoveTimeSlot, onAddSegment, onUpdateSegmentFrame, onRemoveSegment}) => {
   const rootRef = useRef<HTMLElement>(null);
   const pointerRef = useRef<TimelinePointer | null>(null);
   const [motionDrop, setMotionDrop] = useState<MotionDropState | null>(null);
@@ -174,9 +183,26 @@ export const ComposerTimeline: React.FC<{
     pointerRef.current = {kind: "slot", pointerId: event.pointerId, slotId, trackLeft: track.left, trackWidth: track.width};
   };
 
+  const beginSegmentDrag = (event: React.PointerEvent, segmentId: string): void => {
+    if (event.button !== 0) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const track = event.currentTarget.closest(".timeline-ruler")?.getBoundingClientRect();
+    if (!track) return;
+    capturePointer(event.pointerId);
+    pointerRef.current = {kind: "segment", pointerId: event.pointerId, segmentId, trackLeft: track.left, trackWidth: track.width};
+  };
+
   const handlePointerMove = (event: React.PointerEvent<HTMLElement>): void => {
     const session = pointerRef.current;
     if (!session || session.pointerId !== event.pointerId) return;
+    if (session.kind === "segment") {
+      if (onUpdateSegmentFrame) {
+        const frame = snap(frameFromTimelinePointer(event.clientX, session.trackLeft, session.trackWidth, durationInFrames), event.altKey);
+        onUpdateSegmentFrame(session.segmentId, clamp(frame, 1, Math.max(1, durationInFrames - 1)));
+      }
+      return;
+    }
     if (session.kind === "slot") {
       if (onUpdateTimeSlotFrame) {
         onUpdateTimeSlotFrame(session.slotId, snap(frameFromTimelinePointer(event.clientX, session.trackLeft, session.trackWidth, durationInFrames), event.altKey));
@@ -284,7 +310,7 @@ export const ComposerTimeline: React.FC<{
       })}
       {segments.map((segment) => {
         const left = segment.frame / Math.max(1, durationInFrames - 1) * 100;
-        return <span key={segment.id} className="timeline-segment-marker" style={{left: `${left}%`}} title={`${segment.label} · ${segment.frame} 帧`}>
+        return <span key={segment.id} className="timeline-segment-marker" style={{left: `${left}%`}} title={`${segment.label} · ${segment.frame} 帧（拖动调整，Alt 临时取消吸附）`} onPointerDown={(event) => beginSegmentDrag(event, segment.id)}>
           <b>{segment.label}</b>
           {onRemoveSegment && <i aria-label={`删除分段点 ${segment.label}`} onPointerDown={(event) => {event.stopPropagation(); event.preventDefault();}} onClick={(event) => {event.stopPropagation(); onRemoveSegment(segment.id);}}>×</i>}
         </span>;

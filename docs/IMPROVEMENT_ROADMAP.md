@@ -263,7 +263,14 @@ pnpm package:dmg      # build + electron-builder dmg + verify + package-e2e
 - `packages/project-model`:新增 `segmentSchema` 与 `MotionProject.segments`(分段点数组,按帧号排序,default `[]`)。
 - 时间线 UI:工具栏「＋分段」按钮(当前播放头加分段点,自动去重排序),`timeline-ruler` 上渲染橙色虚线分段线 + 标签 + 删除钮。
 - `render-worker.ts`:导出视频且项目有分段点时,输出 `${输出}.sections.json`(每段 label/fromFrame/toFrame/frameCount/durationSeconds + 整片 codec/宽高/fps/色彩空间),与 `.motioner.json` 一并交付。
-- **未做(后续)**:多文件分段导出(按段输出多个视频文件,依赖 `frameRange` 多段区间渲染);分段点拖拽调整。
+
+**已实施(2026-08-11,多文件分段导出 + 分段点拖拽)**:
+- 项目导出选项新增 `exportOptions.segmented`(旧项目默认 `false`);输出规格面板增加「分段导出」开关,仅在视频格式且存在分段点时可用,并明确提示输出文件数量。
+- 开启后选择一个独立输出文件夹;`render-worker.ts` 按计算后的每个闭区间依次调用 Remotion `renderMedia({frameRange: [from, to]})`,输出 `01-段-1.*`、`02-段-2.*` 等视频。每段独立写入 Rec.709 元数据,再经 FFprobe 帧数/编码/尺寸/帧率/色彩校验与 FFmpeg 全片解码校验;全部成功后才原子提升整个目录。
+- 输出文件夹内包含 `sections.json` 与 `motioner-export-report.json`;`sections.json` 每段记录 `fileName/codec_name/width/height/avg_frame_rate/duration/nb_frames/fileSizeBytes` 及原始时间线边界。未开启分段导出时继续保留原整片文件及 sidecar,兼容既有下游流程。
+- `src/shared/section-export.ts` 集中负责段边界排序/去重/过滤、名称清理和清单结构;新增单测覆盖边界计算、旧默认标签重排、安全文件名与 FFprobe 字段。
+- 时间线分段点支持拖拽调整(Alt 临时取消吸附),限制在首末帧之间并拒绝与其他分段点重合;缩短项目时长时同步收拢/去重分段点。
+- `test:exports` 新增三段 H.264 真实渲染场景;`package-e2e` 改为在打包应用内输出并核验三段文件及 `sections.json`,覆盖生产包资源路径。
 
 **验收**:勾选「分段导出」后输出多段文件 + `sections.json`,字段与 FFprobe 实测一致;单测覆盖段边界计算;`package-e2e` 通过。
 
@@ -339,3 +346,4 @@ pnpm package:dmg      # build + electron-builder dmg + verify + package-e2e
   - 各方向「已实施/结论」见上文;实施中发现并记录的事实修正:openBrowser 复用与 premountFor 在 4.0.507 公开 API 不可用、media-utils 不适用、transitions 不适配、低配预览不可降帧率。
   - 明确暂缓项:方向 6 模板组件消费时间槽、方向 8 dotLottie 容器与回放预览、方向 9 多文件分段导出、方向 10 静止段缓存——均需后续独立任务。
 - 2026-08-10:修复实施中发现的冒烟渲染回归——`render-worker.ts` 访问 `message.project.segments` 未容错(老项目/外部调用可能缺字段),现为 `?? []` 容错。
+- 2026-08-11:完成方向 9 后续项——多文件分段导出、逐段真实媒体校验、`sections.json` 单测/真实渲染/打包 E2E 兜底,以及时间线分段点拖拽调整。
