@@ -10,6 +10,7 @@ import {ArrowDown, ArrowUp, X} from "lucide-react";
 import {parseCsv} from "./csv";
 import {InspectorGroup} from "./InspectorGroup";
 import {RangeNumberControl} from "./PropertyControls";
+import {Select} from "./Select";
 
 const sectionLabels: Record<InspectorSection, string> = {
   content: "内容",
@@ -171,20 +172,16 @@ export const FieldControl: React.FC<{
     );
   }
   if (field.control === "select") {
-    return (
-      <select value={String(value ?? "")} onChange={(event) => {
-        const option = field.options.find((candidate) => String(candidate.value) === event.target.value);
-        onChange(option?.value ?? event.target.value);
-      }}>
-        {field.options.map((option) => <option key={String(option.value)} value={String(option.value)}>{option.label}</option>)}
-      </select>
-    );
+    return <Select ariaLabel={field.label} value={String(value ?? "")} options={field.options.map((option) => ({value: String(option.value), label: option.label}))} onChange={(nextValue) => {
+      const option = field.options.find((candidate) => String(candidate.value) === nextValue);
+      onChange(option?.value ?? nextValue);
+    }} />;
   }
   if (field.control === "boolean") {
     return <input className="switch-control" type="checkbox" checked={value === true} onChange={(event) => onChange(event.target.checked)} />;
   }
   if (field.control === "number") {
-    return <RangeNumberControl ariaLabel={field.label} value={typeof value === "number" ? value : 0} min={field.min ?? -1_000_000} max={field.max ?? 1_000_000} step={field.step ?? 1} unit={field.unit} showSlider={field.min !== undefined && field.max !== undefined} onChange={onChange} />;
+    return <RangeNumberControl ariaLabel={field.label} value={typeof value === "number" ? value : 0} min={field.min ?? -1_000_000} max={field.max ?? 1_000_000} step={field.step ?? 1} showSlider={field.min !== undefined && field.max !== undefined} onChange={onChange} />;
   }
   if (field.control === "textarea") {
     return <textarea value={String(value ?? "")} maxLength={field.maxLength} rows={field.rows ?? 4} placeholder={field.placeholder} onChange={(event) => onChange(event.target.value)} />;

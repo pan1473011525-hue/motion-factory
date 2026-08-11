@@ -1,6 +1,7 @@
 import {Monitor, Smartphone} from "lucide-react";
 import {useEffect, useRef, useState} from "react";
 import {DimensionInput} from "./DimensionInput";
+import {Select} from "./Select";
 import {
   RESOLUTION_TIERS,
   getCanvasOrientation,
@@ -33,13 +34,13 @@ export const ResolutionSettings: React.FC<{
   };
 
   return <div className="resolution-settings">
-    <label className="field"><span>清晰度</span><select value={customMode ? "custom" : tier ?? "custom"} onChange={(event) => {
-      if (event.target.value === "custom") {
+    <label className="field"><span>清晰度</span><Select ariaLabel="清晰度" value={customMode ? "custom" : tier ?? "custom"} options={[{value: "custom", label: "自定义"}, ...RESOLUTION_TIERS.map((preset) => ({value: preset.id, label: preset.label}))]} onChange={(value) => {
+      if (value === "custom") {
         setCustomMode(true);
         return;
       }
-      applyPreset(event.target.value as ResolutionTier, orientation);
-    }}><option value="custom">自定义</option>{RESOLUTION_TIERS.map((preset) => <option key={preset.id} value={preset.id}>{preset.label}</option>)}</select></label>
+      applyPreset(value as ResolutionTier, orientation);
+    }} /></label>
     <div className="field"><span>画面方向</span><div className="orientation-segment" role="group" aria-label="画面方向">
       <button type="button" className={orientation === "landscape" ? "active" : ""} aria-pressed={orientation === "landscape"} onClick={() => tier ? applyPreset(tier, "landscape") : onCommit(Math.max(width, height), Math.min(width, height))}><Monitor />横屏</button>
       <button type="button" className={orientation === "portrait" ? "active" : ""} aria-pressed={orientation === "portrait"} onClick={() => tier ? applyPreset(tier, "portrait") : onCommit(Math.min(width, height), Math.max(width, height))}><Smartphone />竖屏</button>

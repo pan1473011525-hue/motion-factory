@@ -170,6 +170,12 @@ pnpm package:dmg      # build + electron-builder dmg + verify + package-e2e
 - 波纹删除:`App.tsx` 的 `deleteSelectedNodes(ripple)` 按被删图层起始帧顺序左移后继图层,时间线工具栏新增「波纹删除」按钮。
 - 干跑校验:`ComposerTimeline` 新增 `onValidate` 钩子,拖动/修剪提交前用 `validateComposerComposition` 校验,不合法则丢弃不落盘。
 
+**UI 交互补强(2026-08-11)**:
+- 时间线素材条、素材轨道、裁剪柄和动效关键点在寻帧/拖动前统一激活所属图层，锁定图层仍允许选中但不允许编辑。
+- 素材条改为可聚焦按钮，支持 Enter/Space 选择；时间线目标通过 `data-timeline-node-id` 在捕获阶段解析，避免只能点击左侧名称才能选中。
+- 时间线根节点使用 pointer capture 持续接收拖动事件，后续 click 可能重定向到根节点；因此 `App.tsx` 的全局清除选中保留区改为整个 `.composer-timeline`，并使用 `composedPath()` 判断，避免刚选中即被清空。
+- 画布顶部移除与时间线重复的播放、逐帧和首尾按钮，完整运输控制集中到时间线工具栏。
+
 **验收**:吸附点可视化提示;多选批量操作;波纹删除后时序无重叠;非法操作被拦截;新增单测覆盖 `timeline-interaction.ts`(参照现有 `timeline-interaction.test.ts`)。
 
 **风险**:多选会改变 `selectedNodeId` 的语义(单选 vs 多选),需在 App 层做好兼容;改动面较大,建议分 3 个小 PR 落地(吸附 → 多选 → 波纹)。
@@ -348,3 +354,4 @@ pnpm package:dmg      # build + electron-builder dmg + verify + package-e2e
 - 2026-08-10:修复实施中发现的冒烟渲染回归——`render-worker.ts` 访问 `message.project.segments` 未容错(老项目/外部调用可能缺字段),现为 `?? []` 容错。
 - 2026-08-11:完成方向 9 后续项——多文件分段导出、逐段真实媒体校验、`sections.json` 单测/真实渲染/打包 E2E 兜底,以及时间线分段点拖拽调整。
 - 2026-08-11:完成 UI 阶段三实测问题修订——模板播放控制单一化、动画模组底色/透明度、1K/2K/4K + 横竖屏、自定义输出尺寸、紧凑数值控件、基础/动效检查器、拖放式动效库、统一时间线和可自定义快捷键。项目模型仅新增向后兼容的可选 `templateAppearance`;`pnpm check` 26 文件/75 测试、真实导出、打包应用 E2E 与 DMG 校验全部通过。
+- 2026-08-11:完成 UI 阶段三实测问题修订（二）——8 秒静默恢复与仅 dirty 时退出询问、全应用统一 Portal 下拉、纯数字输入、紧凑变换布局、模板每次点击强制演示、时间线素材条直接选中及重复运输控件清理；未修改项目文件结构、模板 Schema、动画计算或导出逻辑。

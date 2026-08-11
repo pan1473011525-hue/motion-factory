@@ -1,5 +1,4 @@
 import {useEffect, useState} from "react";
-import {RotateCcw} from "lucide-react";
 import {DEFAULT_TEMPLATE_APPEARANCE, type TemplateAppearance} from "../../../packages/project-model/src";
 import {InspectorGroup} from "./InspectorGroup";
 import {CompactPropertyRow, RangeNumberControl} from "./PropertyControls";
@@ -53,7 +52,7 @@ export const TemplateAppearanceEditor: React.FC<{
     </div>
     <label className="field"><span>自定义颜色</span><div className="color-control"><input type="color" value={color} onChange={(event) => applyColor(event.target.value, true)} /><input value={draft} maxLength={7} onChange={(event) => setDraft(event.target.value.toUpperCase())} onBlur={commitDraft} onKeyDown={(event) => {if (event.key === "Enter") event.currentTarget.blur(); if (event.key === "Escape") {setDraft(color.toUpperCase()); event.currentTarget.blur();}}} /></div></label>
     {recent.length > 0 && <div className="recent-surface-colors"><span>最近使用</span><div>{recent.map((recentColor) => <button type="button" key={recentColor} style={{backgroundColor: recentColor}} title={recentColor} aria-label={`使用最近颜色 ${recentColor}`} onClick={() => applyColor(recentColor)} />)}</div></div>}
-    <CompactPropertyRow label="底色不透明度"><RangeNumberControl ariaLabel="底色不透明度" value={Math.round(value.surfaceOpacity * 100)} min={0} max={100} unit="%" resetValue={100} onChange={(opacity) => onChange({...value, surfaceOpacity: opacity / 100})} /></CompactPropertyRow>
-    <div className="appearance-footer"><small className="field-help">仅修改动画模组内部表面；模组外围继续透明。浅色底会自动使用深色文字。</small><button type="button" className="icon-btn" disabled={value.surfaceColor === null} onClick={() => onChange({...DEFAULT_TEMPLATE_APPEARANCE})} title="恢复模板原始外观"><RotateCcw />恢复</button></div>
+    <CompactPropertyRow label="底色不透明度"><RangeNumberControl ariaLabel="底色不透明度" value={Math.round(value.surfaceOpacity * 100)} min={0} max={100} resetValue={100} onChange={(opacity) => onChange({...value, surfaceOpacity: opacity / 100})} /></CompactPropertyRow>
+    <small className="field-help">仅修改动画模组内部表面；模组外围继续透明。浅色底会自动使用深色文字。</small>
   </InspectorGroup>;
 };

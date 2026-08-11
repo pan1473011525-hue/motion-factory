@@ -4,6 +4,7 @@ import {
   type FrameRate,
 } from "../../../packages/project-model/src";
 import {EXPORT_PRESETS, type ExportPresetId} from "../../shared/export-presets";
+import {Select} from "./Select";
 import {
   RESOLUTION_TIERS,
   getCanvasOrientation,
@@ -28,7 +29,7 @@ const QuickDurationInput: React.FC<{
     else setDraft(seconds.toFixed(3));
   };
 
-  return <label className="quick-output-control quick-duration" title="点击修改项目时长">
+  return <label className="quick-output-control quick-duration" title="点击修改项目时长（秒）">
     <span className="sr-only">时长（秒）</span>
     <input
       aria-label="时长（秒）"
@@ -48,7 +49,6 @@ const QuickDurationInput: React.FC<{
         }
       }}
     />
-    <b>秒</b>
   </label>;
 };
 
@@ -71,27 +71,17 @@ export const OutputQuickSettings: React.FC<{
   };
   return <div className="output-quick-settings" aria-label="快捷输出设置">
     <div className="quick-output-control quick-resolution" title="选择清晰度档位和横竖屏；自定义尺寸请前往导出设置">
-      <label><span className="sr-only">清晰度</span><select aria-label="清晰度" value={resolutionTier ?? "custom"} onChange={(event) => {
-        if (event.target.value !== "custom") applyPreset(event.target.value as ResolutionTier, orientation);
-      }}><option value="custom" disabled>自定义</option>{RESOLUTION_TIERS.map((preset) => <option key={preset.id} value={preset.id}>{preset.label}</option>)}</select></label>
-      <label><span className="sr-only">画面方向</span><select aria-label="画面方向" value={orientation} onChange={(event) => {
-        const nextOrientation = event.target.value as CanvasOrientation;
+      <Select ariaLabel="清晰度" className="quick-select quick-tier-select" value={resolutionTier ?? "custom"} options={[{value: "custom", label: "自定义", disabled: true}, ...RESOLUTION_TIERS.map((preset) => ({value: preset.id, label: preset.label}))]} onChange={(value) => {
+        if (value !== "custom") applyPreset(value as ResolutionTier, orientation);
+      }} />
+      <Select ariaLabel="画面方向" className="quick-select quick-orientation-select" value={orientation} options={[{value: "landscape", label: "横屏"}, {value: "portrait", label: "竖屏"}]} onChange={(value) => {
+        const nextOrientation = value as CanvasOrientation;
         if (resolutionTier) applyPreset(resolutionTier, nextOrientation);
         else onDimensionCommit(nextOrientation === "portrait" ? Math.min(width, height) : Math.max(width, height), nextOrientation === "portrait" ? Math.max(width, height) : Math.min(width, height));
-      }}><option value="landscape">横屏</option><option value="portrait">竖屏</option></select></label>
+      }} />
     </div>
-    <label className="quick-output-control quick-fps" title="点击修改帧率">
-      <span className="sr-only">帧率</span>
-      <select aria-label="帧率" value={frameRateKey(fps)} onChange={(event) => onFrameRateChange(event.target.value)}>
-        {FRAME_RATE_PRESETS.map((preset) => <option key={frameRateKey(preset.value)} value={frameRateKey(preset.value)}>{preset.label} fps</option>)}
-      </select>
-    </label>
+    <div className="quick-output-control quick-fps" title="点击修改帧率"><Select ariaLabel="帧率" className="quick-select" value={frameRateKey(fps)} options={FRAME_RATE_PRESETS.map((preset) => ({value: frameRateKey(preset.value), label: `${preset.label} fps`}))} onChange={onFrameRateChange} /></div>
     <QuickDurationInput seconds={durationSeconds} onCommit={onDurationChange} />
-    <label className="quick-output-control quick-format" title="点击修改导出格式">
-      <span className="sr-only">导出格式</span>
-      <select aria-label="导出格式" value={exportPresetId} onChange={(event) => onExportPresetChange(event.target.value as ExportPresetId)}>
-        {EXPORT_PRESETS.map((preset) => <option key={preset.id} value={preset.id}>{preset.shortLabel}</option>)}
-      </select>
-    </label>
+    <div className="quick-output-control quick-format" title="点击修改导出格式"><Select ariaLabel="导出格式" className="quick-select" value={exportPresetId} options={EXPORT_PRESETS.map((preset) => ({value: preset.id, label: preset.shortLabel}))} onChange={(value) => onExportPresetChange(value as ExportPresetId)} /></div>
   </div>;
 };

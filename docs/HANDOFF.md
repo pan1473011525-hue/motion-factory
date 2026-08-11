@@ -100,13 +100,22 @@
 - 新增 `docs/UI_UX_REFINEMENT_EXECUTION_PLAN.md`、5 张实测修订截图及对应完成报告补充。
 - 验证:`pnpm check` 26 文件/75 测试;`test:exports` 两种 ProRes、PNG RGBA、H.264 整片和三分段全通过;`package:dmg`、8 项包内完整性、打包应用 H.264 三段/75 帧 E2E、`hdiutil verify` 全通过。
 
+### 13. UI 阶段三实测问题修订（二）(2026-08-11)
+- 保存生命周期改为 8 秒防抖的静默恢复快照：成功不再刷提示、不覆盖项目文件、不清除 dirty；仅有未保存修改时退出才弹出“保存并退出 / 不保存 / 取消”，保存取消或失败会中止退出。
+- 新增全应用统一 `Select/Listbox`：全部原生 `<select>` 已替换为同一套 Portal + fixed 菜单，固定从触发器下方展开，不挤压顶栏/画布；支持方向键、Home/End、Enter/Space、Escape、Tab、外部点击关闭，当前项同时显示勾选和高亮。
+- 数字输入框完全移除内嵌 `%`、`°`、`×` 等单位，语义转移到行标签；变换区按位置双轴、尺寸双轴+链接锁、旋转、透明度紧凑对齐，不透明度只保留一个行内重置按钮。
+- 除输入框、文本域和可编辑内容外，全界面禁止文本选择，避免按钮与说明文字出现网页式选中效果。
+- 模板卡片无论当前播放状态、是否重复点击当前模板，都会在状态提交后从第 0 帧强制播放一次；卡片收藏等次级操作不触发播放。
+- 时间线素材条、轨道、裁剪柄和动效关键点交互均先选中图层；时间线根节点 pointer capture 会重定向后续 click，因此全时间线被纳入全局选中保留区。画布顶部移除重复运输控制，只保留视图、性能、场景动作和状态，下方时间线成为唯一完整运输区。
+- 新增统一下拉键盘导航、模板选择动作和关闭决策单测；真实 Electron 中验证静默恢复、退出取消、下拉向下展开、模板强制播放、时间线拖动选中及变换面板对齐。`test:exports` 五类真实输出、打包应用三段 E2E、8 项离线完整性及 `hdiutil verify` 均通过。
+
 ---
 
 ## 三、当前项目状态
 
 - **版本**:1.3.1(应用版本号未随功能递增;如需发版请先更新 `package.json` version 与 README)。
-- **测试**:`pnpm check` 全绿 —— 26 个测试文件 / 75 项测试(lint + tsc + vitest)。
-- **构建产物**:`release/Motioner-1.3.1-arm64.dmg`(274,244,601 bytes,约 261.5 MiB)+ `Motioner-integrity.json` + `SHA256SUMS.txt`;当前 DMG SHA256:`017379eaa3d840ea47bc1789a46b60d55d6ee1cee4aef8213a5d0f3ee7e674cf`。
+- **测试**:`pnpm check` 全绿 —— 29 个测试文件 / 82 项测试(lint + tsc + vitest)。
+- **构建产物**:`release/Motioner-1.3.1-arm64.dmg`(274,252,227 bytes,约 261.5 MiB)+ `Motioner-integrity.json` + `SHA256SUMS.txt`;当前 DMG SHA256:`ad0cfb312340bc5f7a4b7d0b800dd96d3b63e386acc8b2e19a915e363e0daec4`。
 - **Git**:方向 9、UI 重构阶段一/二/三及阶段三实测修订均已实现;`docs/CODEX_HANDOFF_PROMPT.md`、`docs/design-reference/`、`docs/ui-redesign-plan.md` 为本轮开始前已存在的未跟踪用户资料,未纳入提交。
 - **新增依赖**:`@remotion/media`、`@remotion/media-utils`、`@remotion/animation-utils`(均 4.0.507)、`lucide-react`(1.30.0),均已入 `package.json` 与 lock。
 
@@ -128,7 +137,7 @@
 # pnpm 在 codex runtime,需先加 PATH
 export PATH="/Users/monarch/.local/bin:/Users/monarch/.cache/codex-runtimes/codex-primary-runtime/dependencies/bin/fallback:$PATH"
 
-pnpm check            # lint + typecheck + 57 项单测(每次改动后必跑)
+pnpm check            # lint + typecheck + 当前全部单测(每次改动后必跑)
 pnpm dev              # remotion bundle 后 electron-vite dev
 pnpm test:exports     # 真实渲染冒烟(需先 remotion:bundle + electron-vite build;旧产物冲突时先 rm -rf output)
 pnpm package:dmg      # 完整打包:build + electron-builder + verify + package-e2e
@@ -148,7 +157,7 @@ pnpm package:dmg      # 完整打包:build + electron-builder + verify + package
    - `renderMedia/renderFrames/selectComposition` **不接受** `browser`/`puppeteerInstance` 参数(仅内部 API),每次渲染由 Remotion 自行启动浏览器。
    - `<Sequence>` 的 `premountFor` 公开 props 类型不存在(仅内部 no-react 类型)。
    - 帧驱动模型下**不可降低 Player 的 fps 做低配预览**(会改变动画时间语义);低配只降分辨率。
-4. **点击清除选中机制**:`App.tsx` 的 document 捕获监听(composer 模式)会清除 `selectedNodeId`;保留区 = `.composer-canvas-overlay`、`.composer-timeline .layer-timeline-row`、`.composer-timeline .timeline-toolbar`、`.component-library`、`.inspector-panel`。**新增任何操作选中节点的按钮,若不在上述区域内,点击会先清空选中导致操作失效——务必同步加入保留区**。
+4. **点击清除选中机制**:`App.tsx` 的 document 捕获监听(composer 模式)会清除 `selectedNodeId`;保留区 = `.composer-canvas-overlay`、整个 `.composer-timeline`、`.component-library`、`.inspector-panel`。时间线必须整体保留，因为拖动素材条时根节点会接管 pointer capture，后续 click 的 target 可能被重定向到时间线根节点。**新增任何操作选中节点的按钮，若不在上述区域内，点击会先清空选中导致操作失效——务必同步加入保留区**。
 5. **删除逻辑**:`App.tsx` 的 `deleteSelectedNodes(ripple)` 支持多选(`multiSelectedIds` 优先)与波纹删除;时间线工具栏「删除」「波纹删除」、键盘 Delete 均走此函数。
 6. **分辨率输入**:`DimensionInput`(宽 × 高 + ⇄ 对调)在顶栏(compact)与输出规格(inspector)各一处;输入 blur/回车才提交,偶数化在组件内处理。
 7. **暂缓项均有文档记录**,不要在未更新路线图文档的情况下擅自扩大范围。
@@ -173,3 +182,4 @@ pnpm package:dmg      # 完整打包:build + electron-builder + verify + package
 - 2026-08-11:完成 UI 重构阶段二——精确视觉 token、统一控件与卡片、模板卡片类型/时长、全检查器折叠分组、对比度和最小窗口验证;重新打包 v1.3.1 DMG 并更新 SHA256。阶段三等待确认。
 - 2026-08-11:完成 UI 重构阶段三——模板快速编辑/预览/导出、组件拖入落点、可拖动效关键点、固定检查器动作区和长文本/最小窗口稳定性;重新打包 v1.3.1 DMG 并更新 SHA256。三阶段 UI 重构完成,等待最终验收。
 - 2026-08-11:完成阶段三实测问题修订——模组底色/透明度、播放控制、分辨率逻辑、紧凑属性、拖放式动效库、统一时间线和可自定义快捷键;重新打包 v1.3.1 DMG,更新完整性清单与 SHA256,全部自动检查和真实导出验证通过。
+- 2026-08-11:完成阶段三实测问题修订（二）——8 秒静默恢复与 dirty 退出询问、全应用统一下拉、纯数字输入与紧凑变换区、模板强制演示、时间线条选中和重复运输控件清理；实施范围与验收固定于 `docs/UI_UX_REFINEMENT_EXECUTION_PLAN_V2.md`。

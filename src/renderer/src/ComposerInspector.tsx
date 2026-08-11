@@ -10,6 +10,7 @@ import {getComposerComponent, motionPresets} from "../../composer/registry";
 import {FieldControl} from "./Inspector";
 import {InspectorGroup} from "./InspectorGroup";
 import {CompactPairControl, CompactPropertyRow, RangeNumberControl} from "./PropertyControls";
+import {Select} from "./Select";
 
 const sectionLabels: Record<InspectorSection, string> = {
   content: "内容",
@@ -30,7 +31,7 @@ const MotionSelect: React.FC<{
   phase: "enter" | "exit" | "loop";
   value: ComposerMotionPresetId;
   onChange: (value: ComposerMotionPresetId) => void;
-}> = ({label, phase, value, onChange}) => <label className="field"><span>{label}</span><select value={value} onChange={(event) => onChange(event.target.value as ComposerMotionPresetId)}>{motionPresets.filter((preset) => preset.phases.includes(phase)).map((preset) => <option value={preset.id} key={preset.id}>{preset.name}</option>)}</select></label>;
+}> = ({label, phase, value, onChange}) => <label className="field"><span>{label}</span><Select ariaLabel={label} value={value} options={motionPresets.filter((preset) => preset.phases.includes(phase)).map((preset) => ({value: preset.id, label: preset.name}))} onChange={(nextValue) => onChange(nextValue as ComposerMotionPresetId)} /></label>;
 
 export const ComposerInspector: React.FC<{
   node: ComposerNode | null;
@@ -57,10 +58,10 @@ export const ComposerInspector: React.FC<{
       <div className="node-state-actions"><button type="button" className={`icon-btn ${node.hidden ? "active" : ""}`} onClick={() => onChange({...node, hidden: !node.hidden})} title={node.hidden ? "显示图层" : "隐藏图层"}>{node.hidden ? <EyeOff /> : <Eye />}{node.hidden ? "已隐藏" : "可见"}</button><button type="button" className={`icon-btn ${node.locked ? "active" : ""}`} onClick={() => onChange({...node, locked: !node.locked})} title={node.locked ? "解锁图层" : "锁定图层"}>{node.locked ? <Lock /> : <LockOpen />}{node.locked ? "已锁定" : "可编辑"}</button></div>
     </InspectorGroup>
     <InspectorGroup title="变换" defaultOpen className="transform-editor compact-transform-editor">
-      <CompactPairControl label="位置" firstLabel="X" secondLabel="Y" firstValue={percent(node.transform.x)} secondValue={percent(node.transform.y)} min={-200} max={300} step={0.1} unit="%" onFirstChange={(value) => updateTransform({x: value / 100})} onSecondChange={(value) => updateTransform({y: value / 100})} />
-      <CompactPairControl label="尺寸" firstLabel="宽" secondLabel="高" firstValue={percent(node.transform.width)} secondValue={percent(node.transform.height)} min={1} max={300} step={0.1} unit="%" linked={sizeLinked} onLinkedChange={setSizeLinked} onFirstChange={(value) => updateTransform({width: value / 100, ...(sizeLinked ? {height: clamp(node.transform.height * (value / 100) / node.transform.width, 0.01, 3)} : {})})} onSecondChange={(value) => updateTransform({height: value / 100, ...(sizeLinked ? {width: clamp(node.transform.width * (value / 100) / node.transform.height, 0.01, 3)} : {})})} />
-      <CompactPropertyRow label="旋转"><RangeNumberControl ariaLabel="旋转" value={node.transform.rotation} min={-360} max={360} step={0.5} unit="°" resetValue={0} onChange={(rotation) => updateTransform({rotation})} /></CompactPropertyRow>
-      <CompactPropertyRow label="透明度"><RangeNumberControl ariaLabel="透明度" value={Math.round(node.transform.opacity * 100)} min={0} max={100} step={1} unit="%" resetValue={100} onChange={(opacity) => updateTransform({opacity: opacity / 100})} /></CompactPropertyRow>
+      <CompactPairControl label="位置（%）" firstLabel="X" secondLabel="Y" firstValue={percent(node.transform.x)} secondValue={percent(node.transform.y)} min={-200} max={300} step={0.1} onFirstChange={(value) => updateTransform({x: value / 100})} onSecondChange={(value) => updateTransform({y: value / 100})} />
+      <CompactPairControl label="尺寸（%）" firstLabel="宽" secondLabel="高" firstValue={percent(node.transform.width)} secondValue={percent(node.transform.height)} min={1} max={300} step={0.1} linked={sizeLinked} onLinkedChange={setSizeLinked} onFirstChange={(value) => updateTransform({width: value / 100, ...(sizeLinked ? {height: clamp(node.transform.height * (value / 100) / node.transform.width, 0.01, 3)} : {})})} onSecondChange={(value) => updateTransform({height: value / 100, ...(sizeLinked ? {width: clamp(node.transform.width * (value / 100) / node.transform.height, 0.01, 3)} : {})})} />
+      <CompactPropertyRow label="旋转（°）"><RangeNumberControl ariaLabel="旋转" value={node.transform.rotation} min={-360} max={360} step={0.5} resetValue={0} onChange={(rotation) => updateTransform({rotation})} /></CompactPropertyRow>
+      <CompactPropertyRow label="透明度"><RangeNumberControl ariaLabel="透明度" value={Math.round(node.transform.opacity * 100)} min={0} max={100} step={1} resetValue={100} onChange={(opacity) => updateTransform({opacity: opacity / 100})} /></CompactPropertyRow>
     </InspectorGroup>
     {orderedSections.map((section) => {
       const fields = definition.fields.filter((field) => field.section === section);
@@ -74,23 +75,23 @@ export const ComposerInspector: React.FC<{
     {node.componentId === "template" && <InspectorGroup title="模板快照" className="template-node-summary"><dl><div><dt>模板</dt><dd>{String(node.props.templateId ?? "")}</dd></div><div><dt>参数</dt><dd>{Object.keys((node.props.templateProps as Record<string, unknown>) ?? {}).length} 项</dd></div></dl><small className="field-help">模板在转换时被冻结为参数快照。可继续移动、缩放、定时和添加动效。</small></InspectorGroup>}
   </> : <>
     <InspectorGroup title="整体动效" defaultOpen className="node-motion-editor">
-      <CompactPropertyRow label="整体强度"><RangeNumberControl ariaLabel="整体强度" value={node.motion.intensity} min={0} max={2} step={0.05} unit="×" resetValue={1} onChange={(intensity) => updateMotion({intensity})} /></CompactPropertyRow>
+      <CompactPropertyRow label="整体强度"><RangeNumberControl ariaLabel="整体强度" value={node.motion.intensity} min={0} max={2} step={0.05} resetValue={1} onChange={(intensity) => updateMotion({intensity})} /></CompactPropertyRow>
     </InspectorGroup>
     <InspectorGroup title="入场动效" defaultOpen className="node-motion-editor phase-motion-editor">
       <MotionSelect label="动效" phase="enter" value={node.motion.enter} onChange={(enter) => updateMotion({enter})} />
       <CompactPropertyRow label="入场帧数"><RangeNumberControl ariaLabel="入场帧数" value={node.motion.enterDuration} min={1} max={Math.max(1, node.timing.durationInFrames)} resetValue={15} onChange={(enterDuration) => updateMotion({enterDuration})} /></CompactPropertyRow>
-      <CompactPropertyRow label="入场强度"><RangeNumberControl ariaLabel="入场强度" value={Math.round(mix.enter * 100)} min={0} max={100} unit="%" resetValue={100} onChange={(enter) => updateMotion({mix: {...mix, enter: enter / 100}})} /></CompactPropertyRow>
+      <CompactPropertyRow label="入场强度"><RangeNumberControl ariaLabel="入场强度" value={Math.round(mix.enter * 100)} min={0} max={100} resetValue={100} onChange={(enter) => updateMotion({mix: {...mix, enter: enter / 100}})} /></CompactPropertyRow>
       <div className="phase-motion-actions"><button type="button" onClick={() => updateMotion({enter: "fade", enterDuration: 15, mix: {...mix, enter: 1}})}><RotateCcw />重置</button><button type="button" onClick={() => updateMotion({enter: "none"})}><X />清除</button></div>
     </InspectorGroup>
     <InspectorGroup title="持续动效" defaultOpen className="node-motion-editor phase-motion-editor">
       <MotionSelect label="动效" phase="loop" value={node.motion.loop} onChange={(loop) => updateMotion({loop})} />
-      <CompactPropertyRow label="持续强度"><RangeNumberControl ariaLabel="持续强度" value={Math.round(mix.loop * 100)} min={0} max={100} unit="%" resetValue={100} onChange={(loop) => updateMotion({mix: {...mix, loop: loop / 100}})} /></CompactPropertyRow>
+      <CompactPropertyRow label="持续强度"><RangeNumberControl ariaLabel="持续强度" value={Math.round(mix.loop * 100)} min={0} max={100} resetValue={100} onChange={(loop) => updateMotion({mix: {...mix, loop: loop / 100}})} /></CompactPropertyRow>
       <div className="phase-motion-actions"><button type="button" onClick={() => updateMotion({loop: "none", mix: {...mix, loop: 1}})}><RotateCcw />重置</button><button type="button" onClick={() => updateMotion({loop: "none"})}><X />清除</button></div>
     </InspectorGroup>
     <InspectorGroup title="退场动效" defaultOpen className="node-motion-editor phase-motion-editor">
       <MotionSelect label="动效" phase="exit" value={node.motion.exit} onChange={(exit) => updateMotion({exit})} />
       <CompactPropertyRow label="退场帧数"><RangeNumberControl ariaLabel="退场帧数" value={node.motion.exitDuration} min={1} max={Math.max(1, node.timing.durationInFrames)} resetValue={15} onChange={(exitDuration) => updateMotion({exitDuration})} /></CompactPropertyRow>
-      <CompactPropertyRow label="退场强度"><RangeNumberControl ariaLabel="退场强度" value={Math.round(mix.exit * 100)} min={0} max={100} unit="%" resetValue={100} onChange={(exit) => updateMotion({mix: {...mix, exit: exit / 100}})} /></CompactPropertyRow>
+      <CompactPropertyRow label="退场强度"><RangeNumberControl ariaLabel="退场强度" value={Math.round(mix.exit * 100)} min={0} max={100} resetValue={100} onChange={(exit) => updateMotion({mix: {...mix, exit: exit / 100}})} /></CompactPropertyRow>
       <div className="phase-motion-actions"><button type="button" onClick={() => updateMotion({exit: "fade", exitDuration: 15, mix: {...mix, exit: 1}})}><RotateCcw />重置</button><button type="button" onClick={() => updateMotion({exit: "none"})}><X />清除</button></div>
     </InspectorGroup>
   </>}</>;

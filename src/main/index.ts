@@ -49,6 +49,7 @@ import {writeAppLog} from "./logger";
 import {fingerprintFile} from "./asset-fingerprint";
 import {listFilesRecursively, matchAssetsByName} from "./asset-relink";
 import {prepareMediaCache} from "./media-cache";
+import {decideProjectCloseAction} from "./project-close-decision";
 import {resolveOutputConflict} from "./output-conflict";
 import {RenderJobQueue} from "./render-queue";
 import {readRecentProjects, recordRecentProject} from "./recent-projects";
@@ -63,8 +64,13 @@ import {
 let mainWindow: BrowserWindow | null = null;
 let renderWorker: UtilityProcess | null = null;
 let currentProjectPath: string | null = null;
+let rendererHasUnsavedChanges = false;
+let allowWindowClose = false;
+let quitRequested = false;
+let closePromptActive = false;
 let packagedE2EJobId: string | null = null;
 let packagedE2EOutput: string | null = null;
+const closeSaveResolvers = new Map<string, (saved: boolean) => void>();
 type QueuedRenderJob = Extract<RenderWorkerMessage, {type: "start"}>;
 const renderJobQueue = new RenderJobQueue<QueuedRenderJob>();
 
@@ -75,6 +81,21 @@ const getRecoveryPath = (): string =>
 
 const getRecentProjectsPath = (): string =>
   join(app.getPath("userData"), "recent-projects.json");
+
+const requestRendererSaveBeforeClose = (window: BrowserWindow): Promise<boolean> =>
+  new Promise((resolve) => {
+    const requestId = randomUUID();
+    const timeout = setTimeout(() => {
+      closeSaveResolvers.delete(requestId);
+      resolve(false);
+    }, 120_000);
+    closeSaveResolvers.set(requestId, (saved) => {
+      clearTimeout(timeout);
+      closeSaveResolvers.delete(requestId);
+      resolve(saved);
+    });
+    window.webContents.send("app:save-before-close", requestId);
+  });
 
 const touchProject = (project: MotionProject, name = project.name): MotionProject =>
   parseMotionProject({...project, name, updatedAt: now()});
@@ -338,7 +359,11 @@ const installApplicationMenu = (): void => {
 };
 
 const createWindow = (): void => {
-  mainWindow = new BrowserWindow({
+  allowWindowClose = false;
+  quitRequested = false;
+  closePromptActive = false;
+  rendererHasUnsavedChanges = false;
+  const window = new BrowserWindow({
     width: 1440,
     height: 900,
     minWidth: 1280,
@@ -354,13 +379,62 @@ const createWindow = (): void => {
       sandbox: true,
     },
   });
+  mainWindow = window;
 
-  mainWindow.once("ready-to-show", () => mainWindow?.show());
+  window.on("close", (event) => {
+    if (allowWindowClose) return;
+    event.preventDefault();
+    if (closePromptActive) return;
+    closePromptActive = true;
+    void (async () => {
+      let closeAction = decideProjectCloseAction(rendererHasUnsavedChanges);
+      if (rendererHasUnsavedChanges) {
+        const result = await dialog.showMessageBox(window, {
+          type: "warning",
+          title: "保存本次项目？",
+          message: "当前项目有未保存的修改。",
+          detail: "自动恢复快照不能代替项目文件。是否在退出前保存？",
+          buttons: ["保存并退出", "不保存", "取消"],
+          defaultId: 0,
+          cancelId: 2,
+          noLink: true,
+        });
+        closeAction = decideProjectCloseAction(true, result.response);
+        if (closeAction === "cancel") {
+          quitRequested = false;
+          return;
+        }
+        if (closeAction === "save" && !await requestRendererSaveBeforeClose(window)) {
+          quitRequested = false;
+          return;
+        }
+      }
+
+      await removeRecoveryFile(getRecoveryPath());
+      rendererHasUnsavedChanges = false;
+      allowWindowClose = true;
+      if (quitRequested) app.quit();
+      else window.close();
+    })().catch((error) => {
+      quitRequested = false;
+      const message = error instanceof Error ? error.message : String(error);
+      void writeAppLog("ERROR", "project-close", "关闭项目前处理失败", message);
+      dialog.showErrorBox("无法关闭项目", message);
+    }).finally(() => {
+      closePromptActive = false;
+    });
+  });
+
+  window.on("closed", () => {
+    if (mainWindow === window) mainWindow = null;
+  });
+
+  window.once("ready-to-show", () => window.show());
 
   if (process.env.ELECTRON_RENDERER_URL) {
-    void mainWindow.loadURL(process.env.ELECTRON_RENDERER_URL);
+    void window.loadURL(process.env.ELECTRON_RENDERER_URL);
   } else {
-    void mainWindow.loadFile(join(__dirname, "../renderer/index.html"));
+    void window.loadFile(join(__dirname, "../renderer/index.html"));
   }
 };
 
@@ -468,16 +542,10 @@ ipcMain.handle("project:autosave", async (_event, rawRequest) => {
   const {project} = projectWriteRequestSchema.parse(rawRequest);
   const savedAt = now();
   const updatedProject = touchProject(project);
-
-  if (currentProjectPath) {
-    await writeProjectFile(currentProjectPath, updatedProject);
-    return {savedAt, target: "project", path: currentProjectPath} as const;
-  }
-
   const recoveryPath = getRecoveryPath();
   await writeRecoveryFile(recoveryPath, {
     project: updatedProject,
-    sourcePath: null,
+    sourcePath: currentProjectPath,
     savedAt,
   });
   return {savedAt, target: "recovery", path: recoveryPath} as const;
@@ -502,6 +570,19 @@ ipcMain.handle("project:recovery:restore", async (): Promise<ProjectSession | nu
 
 ipcMain.handle("project:recovery:discard", async (): Promise<void> => {
   await removeRecoveryFile(getRecoveryPath());
+});
+
+ipcMain.on("app:project-dirty", (event, dirty: unknown) => {
+  if (event.sender !== mainWindow?.webContents || typeof dirty !== "boolean") return;
+  rendererHasUnsavedChanges = dirty;
+});
+
+ipcMain.on("app:save-before-close-result", (event, rawResult: unknown) => {
+  if (event.sender !== mainWindow?.webContents || typeof rawResult !== "object" || rawResult === null) return;
+  const requestId = Reflect.get(rawResult, "requestId");
+  const saved = Reflect.get(rawResult, "saved");
+  if (typeof requestId !== "string" || typeof saved !== "boolean") return;
+  closeSaveResolvers.get(requestId)?.(saved);
 });
 
 ipcMain.on("app:renderer-error", (_event, rawReport) => {
@@ -793,7 +874,13 @@ app.on("window-all-closed", () => {
   }
 });
 
-app.on("before-quit", () => {
+app.on("before-quit", (event) => {
+  if (mainWindow && !allowWindowClose) {
+    event.preventDefault();
+    quitRequested = true;
+    mainWindow.close();
+    return;
+  }
   renderJobQueue.clear();
   renderWorker?.kill();
 });

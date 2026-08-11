@@ -165,7 +165,7 @@ export type ProjectOperationResult =
 
 export type AutosaveResult = {
   savedAt: string;
-  target: "project" | "recovery";
+  target: "recovery";
   path: string;
 };
 
@@ -187,6 +187,8 @@ export type MotionerApi = {
   getRecovery: () => Promise<RecoverySnapshot | null>;
   restoreRecovery: () => Promise<ProjectSession | null>;
   discardRecovery: () => Promise<void>;
+  setProjectDirty: (dirty: boolean) => void;
+  onSaveBeforeClose: (listener: () => Promise<boolean>) => () => void;
   reportRendererError: (report: RendererErrorReport) => void;
   selectMedia: (request: MediaSelectionRequest) => Promise<ProjectAsset | null>;
   selectFont: () => Promise<ProjectAsset | null>;

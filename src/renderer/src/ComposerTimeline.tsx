@@ -55,6 +55,7 @@ type ScrubPointer = {
   pointerId: number;
   trackLeft: number;
   trackWidth: number;
+  nodeId?: string;
 };
 
 type SlotPointer = {
@@ -155,6 +156,12 @@ export const ComposerTimeline: React.FC<{
   const snap = (frame: number, disabled: boolean): number =>
     disabled ? frame : snapFrame(frame, snapTargets).frame;
 
+  const selectTimelineTarget = (target: EventTarget | null, extend: boolean): void => {
+    const element = target instanceof Element ? target.closest<HTMLElement>("[data-timeline-node-id]") : null;
+    const nodeId = element?.dataset.timelineNodeId;
+    if (nodeId) onSelect(nodeId, extend);
+  };
+
   const capturePointer = (pointerId: number): void => {
     try {
       rootRef.current?.setPointerCapture(pointerId);
@@ -163,13 +170,14 @@ export const ComposerTimeline: React.FC<{
     }
   };
 
-  const beginScrub = (event: React.PointerEvent<HTMLElement>): void => {
+  const beginScrub = (event: React.PointerEvent<HTMLElement>, node?: ComposerNode): void => {
     if (event.button !== 0) return;
     event.preventDefault();
     event.stopPropagation();
+    if (node) onSelect(node.id, event.shiftKey);
     const bounds = event.currentTarget.getBoundingClientRect();
     capturePointer(event.pointerId);
-    pointerRef.current = {kind: "scrub", pointerId: event.pointerId, trackLeft: bounds.left, trackWidth: bounds.width};
+    pointerRef.current = {kind: "scrub", pointerId: event.pointerId, trackLeft: bounds.left, trackWidth: bounds.width, nodeId: node?.id};
     onSeekStart();
     onSeek(snap(frameFromTimelinePointer(event.clientX, bounds.left, bounds.width, durationInFrames), event.altKey));
   };
@@ -285,6 +293,8 @@ export const ComposerTimeline: React.FC<{
     if (rootRef.current?.hasPointerCapture(event.pointerId)) rootRef.current.releasePointerCapture(event.pointerId);
     pointerRef.current = null;
     onSeekEnd();
+    if (session.kind === "scrub" && session.nodeId) onSelect(session.nodeId, false);
+    if (session.kind === "timing" || session.kind === "motion-boundary") onSelect(session.node.id, false);
     if (session.kind === "timing" || session.kind === "motion-boundary") {
       onPreview(null);
       // 干跑校验:编辑结果不合法(如校验失败)则丢弃,不落盘。
@@ -310,6 +320,8 @@ export const ComposerTimeline: React.FC<{
     ref={rootRef}
     className="composer-timeline"
     aria-label="图层时间轴"
+    onPointerDownCapture={(event) => {if (event.button === 0) selectTimelineTarget(event.target, event.shiftKey);}}
+    onClickCapture={(event) => selectTimelineTarget(event.target, event.shiftKey)}
     onPointerMove={handlePointerMove}
     onPointerUp={endPointer}
     onPointerCancel={endPointer}
@@ -387,13 +399,22 @@ export const ComposerTimeline: React.FC<{
             <button type="button" className="icon-btn" title={node.locked ? "解锁图层" : "锁定图层"} aria-label={node.locked ? "解锁图层" : "锁定图层"} onClick={(event) => {event.stopPropagation(); onCommit(replaceNode(composition, {...node, locked: !node.locked}));}}>{node.locked ? <Lock /> : <LockOpen />}</button>
             <span title={motionSummary || node.name}>{node.name}</span>
           </div>
-          <div className="layer-timing-track" onPointerDown={(event) => {onSelect(node.id, false); beginScrub(event);}}>
+          <div className="layer-timing-track" data-timeline-node-id={node.id} onPointerDown={(event) => beginScrub(event, node)}>
             <span className="timeline-playhead" style={{left: `${playheadPercent}%`}} />
-            <div
+            <button
+              type="button"
               className={`layer-timing-bar ${node.hidden ? "hidden" : ""} ${dropTarget ? "motion-drop-active" : ""}`}
+              aria-label={`选择图层 ${node.name}`}
+              data-selected={node.id === selectedNodeId ? "true" : undefined}
               style={{left: `${node.timing.from / durationInFrames * 100}%`, width: `${node.timing.durationInFrames / durationInFrames * 100}%`}}
               title={motionSummary ? `${node.name} · ${motionSummary}` : `${node.name} · 可拖入动效`}
               onPointerDown={(event) => beginTiming(event, node, "move")}
+              onClick={(event) => {event.stopPropagation(); onSelect(node.id, event.shiftKey);}}
+              onKeyDown={(event) => {
+                if (event.key !== "Enter" && event.key !== " ") return;
+                event.preventDefault();
+                onSelect(node.id, event.shiftKey);
+              }}
               onDragOver={(event) => {
                 if (!isMotionDrag(event)) return;
                 event.preventDefault();
@@ -424,11 +445,11 @@ export const ComposerTimeline: React.FC<{
               <i className="timing-handle timing-start" onPointerDown={(event) => beginTiming(event, node, "trim-start")} />
               <span className="timing-duration">{node.timing.durationInFrames}f</span>
               {motionSummary && <span className="timeline-motion-summary" aria-hidden="true">FX</span>}
-              {node.motion.enter !== "none" && <button type="button" className="motion-keyframe motion-keyframe-enter" style={{left: `${clamp(node.motion.enterDuration / Math.max(1, node.timing.durationInFrames) * 100, 0, 100)}%`}} title={`入场结束 · ${node.motion.enterDuration} 帧（拖动调整）`} aria-label={`调整 ${node.name} 入场时长，当前 ${node.motion.enterDuration} 帧`} onPointerDown={(event) => beginMotionBoundary(event, node, "enter-end")} />}
-              {node.motion.exit !== "none" && <button type="button" className="motion-keyframe motion-keyframe-exit" style={{left: `${clamp((node.timing.durationInFrames - node.motion.exitDuration) / Math.max(1, node.timing.durationInFrames) * 100, 0, 100)}%`}} title={`退场开始 · ${node.motion.exitDuration} 帧（拖动调整）`} aria-label={`调整 ${node.name} 退场时长，当前 ${node.motion.exitDuration} 帧`} onPointerDown={(event) => beginMotionBoundary(event, node, "exit-start")} />}
+              {node.motion.enter !== "none" && <span role="button" className="motion-keyframe motion-keyframe-enter" style={{left: `${clamp(node.motion.enterDuration / Math.max(1, node.timing.durationInFrames) * 100, 0, 100)}%`}} title={`入场结束 · ${node.motion.enterDuration} 帧（拖动调整）`} aria-label={`调整 ${node.name} 入场时长，当前 ${node.motion.enterDuration} 帧`} onPointerDown={(event) => beginMotionBoundary(event, node, "enter-end")} />}
+              {node.motion.exit !== "none" && <span role="button" className="motion-keyframe motion-keyframe-exit" style={{left: `${clamp((node.timing.durationInFrames - node.motion.exitDuration) / Math.max(1, node.timing.durationInFrames) * 100, 0, 100)}%`}} title={`退场开始 · ${node.motion.exitDuration} 帧（拖动调整）`} aria-label={`调整 ${node.name} 退场时长，当前 ${node.motion.exitDuration} 帧`} onPointerDown={(event) => beginMotionBoundary(event, node, "exit-start")} />}
               {dropTarget && <span className="motion-drop-zones" aria-hidden="true"><b className={dropTarget.phase === "enter" ? "active" : ""}>入场</b><b className={dropTarget.phase === "loop" ? "active" : ""}>循环</b><b className={dropTarget.phase === "exit" ? "active" : ""}>退场</b></span>}
               <i className="timing-handle timing-end" onPointerDown={(event) => beginTiming(event, node, "trim-end")} />
-            </div>
+            </button>
           </div>
         </div>;
       })}

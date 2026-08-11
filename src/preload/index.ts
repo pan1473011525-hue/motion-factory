@@ -38,6 +38,20 @@ const api: MotionerApi = {
     ipcRenderer.invoke("project:recovery:restore"),
   discardRecovery: (): Promise<void> =>
     ipcRenderer.invoke("project:recovery:discard"),
+  setProjectDirty: (dirty: boolean): void =>
+    ipcRenderer.send("app:project-dirty", dirty),
+  onSaveBeforeClose: (listener: () => Promise<boolean>): (() => void) => {
+    const handler = async (_event: Electron.IpcRendererEvent, requestId: string): Promise<void> => {
+      let saved = false;
+      try {
+        saved = await listener();
+      } finally {
+        ipcRenderer.send("app:save-before-close-result", {requestId, saved});
+      }
+    };
+    ipcRenderer.on("app:save-before-close", handler);
+    return () => ipcRenderer.removeListener("app:save-before-close", handler);
+  },
   reportRendererError: (report: RendererErrorReport): void =>
     ipcRenderer.send("app:renderer-error", report),
   selectMedia: (request: MediaSelectionRequest) =>

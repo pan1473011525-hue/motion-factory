@@ -30,16 +30,15 @@ export const RangeNumberControl: React.FC<{
   min: number;
   max: number;
   step?: number;
-  unit?: string;
   onChange: (value: number) => void;
   resetValue?: number;
   showSlider?: boolean;
   sliderMin?: number;
   sliderMax?: number;
-}> = ({ariaLabel, value, min, max, step = 1, unit, onChange, resetValue, showSlider = true, sliderMin = min, sliderMax = max}) => (
+}> = ({ariaLabel, value, min, max, step = 1, onChange, resetValue, showSlider = true, sliderMin = min, sliderMax = max}) => (
   <div className={`range-number-control ${showSlider ? "" : "without-slider"}`.trim()}>
     {showSlider && <input aria-label={`${ariaLabel}滑块`} type="range" min={sliderMin} max={sliderMax} step={step} value={clamp(value, sliderMin, sliderMax)} onChange={(event) => onChange(event.target.valueAsNumber)} />}
-    <div className="compact-number-box"><DraftNumber ariaLabel={ariaLabel} value={value} min={min} max={max} step={step} onCommit={onChange} />{unit && <span>{unit}</span>}</div>
+    <div className="compact-number-box"><DraftNumber ariaLabel={ariaLabel} value={value} min={min} max={max} step={step} onCommit={onChange} /></div>
     {resetValue !== undefined && <button type="button" className="compact-reset" disabled={value === resetValue} onClick={() => onChange(resetValue)} title={`重置${ariaLabel}`} aria-label={`重置${ariaLabel}`}><RotateCcw /></button>}
   </div>
 );
@@ -59,16 +58,15 @@ export const CompactPairControl: React.FC<{
   min: number;
   max: number;
   step?: number;
-  unit?: string;
   onFirstChange: (value: number) => void;
   onSecondChange: (value: number) => void;
   linked?: boolean;
   onLinkedChange?: (linked: boolean) => void;
-}> = ({label, firstLabel, secondLabel, firstValue, secondValue, min, max, step = 1, unit, onFirstChange, onSecondChange, linked, onLinkedChange}) => (
+}> = ({label, firstLabel, secondLabel, firstValue, secondValue, min, max, step = 1, onFirstChange, onSecondChange, linked, onLinkedChange}) => (
   <div className="compact-pair-row">
     <span className="compact-property-label">{label}</span>
-    <label><b>{firstLabel}</b><div className="compact-number-box"><DraftNumber ariaLabel={`${label} ${firstLabel}`} value={firstValue} min={min} max={max} step={step} onCommit={onFirstChange} />{unit && <span>{unit}</span>}</div></label>
-    {onLinkedChange && <button type="button" className={`compact-link ${linked ? "active" : ""}`} onClick={() => onLinkedChange(!linked)} title={linked ? "取消宽高联动" : "联动宽高"} aria-label={linked ? "取消宽高联动" : "联动宽高"}>{linked ? <Link /> : <Link2Off />}</button>}
-    <label><b>{secondLabel}</b><div className="compact-number-box"><DraftNumber ariaLabel={`${label} ${secondLabel}`} value={secondValue} min={min} max={max} step={step} onCommit={onSecondChange} />{unit && <span>{unit}</span>}</div></label>
+    <label><b>{firstLabel}</b><div className="compact-number-box"><DraftNumber ariaLabel={`${label} ${firstLabel}`} value={firstValue} min={min} max={max} step={step} onCommit={onFirstChange} /></div></label>
+    {onLinkedChange ? <button type="button" className={`compact-link ${linked ? "active" : ""}`} onClick={() => onLinkedChange(!linked)} title={linked ? "取消宽高联动" : "联动宽高"} aria-label={linked ? "取消宽高联动" : "联动宽高"}>{linked ? <Link /> : <Link2Off />}</button> : <span className="compact-link-placeholder" aria-hidden="true" />}
+    <label><b>{secondLabel}</b><div className="compact-number-box"><DraftNumber ariaLabel={`${label} ${secondLabel}`} value={secondValue} min={min} max={max} step={step} onCommit={onSecondChange} /></div></label>
   </div>
 );
