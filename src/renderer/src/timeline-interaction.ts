@@ -1,4 +1,5 @@
 export type MotionDropPhase = "enter" | "exit" | "loop";
+export type MotionBoundary = "enter-end" | "exit-start";
 
 const clamp = (value: number, minimum: number, maximum: number): number =>
   Math.min(maximum, Math.max(minimum, value));
@@ -54,4 +55,20 @@ export const chooseMotionDropPhase = (
       ? ["exit", "loop", "enter"]
       : ["loop", "enter", "exit"];
   return preference.find((phase) => phases.includes(phase)) ?? phases[0] ?? null;
+};
+
+/**
+ * 将时间轴上的动效边界帧换算为现有入场/退场时长字段。
+ * 边界始终限制在图层素材条内，至少保留 1 帧。
+ */
+export const motionDurationFromBoundaryFrame = (
+  boundary: MotionBoundary,
+  boundaryFrame: number,
+  nodeFrom: number,
+  nodeDuration: number,
+): number => {
+  const safeDuration = Math.max(1, nodeDuration);
+  return boundary === "enter-end"
+    ? clamp(boundaryFrame - nodeFrom, 1, safeDuration)
+    : clamp(nodeFrom + safeDuration - boundaryFrame, 1, safeDuration);
 };

@@ -9,7 +9,7 @@ import {
   motionPresets,
   type ComposerComponentCategory,
 } from "../../composer/registry";
-import {Check, Plus} from "lucide-react";
+import {Check, GripVertical, Plus} from "lucide-react";
 
 type LibraryTab = "components" | "motions";
 type CategoryFilter = "all" | ComposerComponentCategory;
@@ -37,6 +37,7 @@ export const ComponentLibrary: React.FC<{
   const [tab, setTab] = useState<LibraryTab>("components");
   const [category, setCategory] = useState<CategoryFilter>("all");
   const [query, setQuery] = useState("");
+  const [draggedComponentId, setDraggedComponentId] = useState<ComposerComponentId | null>(null);
   const normalizedQuery = query.trim().toLocaleLowerCase("zh-CN");
   const filteredComponents = useMemo(() => composerComponents.filter((component) => {
     const matchesCategory = category === "all" || component.category === category;
@@ -56,8 +57,23 @@ export const ComponentLibrary: React.FC<{
     <label className="search-field"><span className="sr-only">搜索组件或动效</span><input type="search" placeholder={tab === "components" ? "搜索组件" : "搜索动效"} value={query} onChange={(event) => setQuery(event.target.value)} /></label>
     {tab === "components" ? <>
       <nav className="category-row composer-categories" aria-label="组件分类">{(Object.keys(categoryLabels) as CategoryFilter[]).map((key) => <button className={category === key ? "category-active" : ""} type="button" key={key} onClick={() => setCategory(key)}>{categoryLabels[key]}</button>)}</nav>
-      <div className="component-grid">{filteredComponents.map((component) => <button type="button" className="component-card" key={component.id} onClick={() => onAdd(component.id)}><span className="component-glyph" aria-hidden="true">{component.preview}</span><span><strong>{component.name}</strong><small>{component.description}</small></span><b aria-hidden="true"><Plus size={13} /></b></button>)}{filteredComponents.length === 0 && <p className="empty-templates">没有匹配的组件</p>}</div>
-      <div className="prototype-note"><strong>{composerComponents.length} 个基础组件</strong><span>点击组件即可在画布中央创建图层。</span></div>
+      <p className="library-guidance"><GripVertical aria-hidden="true" />点击创建，或拖到画布定位</p>
+      <div className="component-grid">{filteredComponents.map((component) => <button
+        type="button"
+        className={`component-card ${draggedComponentId === component.id ? "component-card-dragging" : ""}`}
+        key={component.id}
+        draggable
+        title={`${component.name}：点击在画布中央创建，或拖到画布指定位置`}
+        onClick={() => onAdd(component.id)}
+        onDragStart={(event) => {
+          setDraggedComponentId(component.id);
+          event.dataTransfer.effectAllowed = "copy";
+          event.dataTransfer.setData("application/x-motioner-component", component.id);
+          event.dataTransfer.setData("text/plain", component.id);
+        }}
+        onDragEnd={() => setDraggedComponentId(null)}
+      ><span className="component-glyph" aria-hidden="true">{component.preview}</span><span><strong>{component.name}</strong><small>{component.description}</small></span><b className="component-add-affordance" aria-hidden="true"><Plus size={13} /></b></button>)}{filteredComponents.length === 0 && <p className="empty-templates">没有匹配的组件</p>}</div>
+      <div className="prototype-note"><strong>{composerComponents.length} 个基础组件</strong><span>拖入画布可按落点创建；点击则在画布中央创建。</span></div>
     </> : <>
       <div className="motion-library-list">{filteredMotions.map((preset) => {
         const appliedPhases = preset.phases.filter((phase) => isMotionApplied(selectedNode, preset.id, phase));

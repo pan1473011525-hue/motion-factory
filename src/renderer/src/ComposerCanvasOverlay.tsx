@@ -1,5 +1,6 @@
-import {useRef} from "react";
-import type {ComposerComposition, ComposerNode} from "../../../packages/project-model/src";
+import {useRef, useState} from "react";
+import type {ComposerComponentId, ComposerComposition, ComposerNode} from "../../../packages/project-model/src";
+import {composerComponents} from "../../composer/registry";
 
 type ResizeHandle = "move" | "n" | "s" | "e" | "w" | "ne" | "nw" | "se" | "sw";
 
@@ -29,6 +30,14 @@ const replaceNode = (scene: ComposerComposition, node: ComposerNode): ComposerCo
   nodes: scene.nodes.map((candidate) => candidate.id === node.id ? node : candidate),
 });
 
+const readDraggedComponent = (event: React.DragEvent): ComposerComponentId | null => {
+  const value = event.dataTransfer.getData("application/x-motioner-component") || event.dataTransfer.getData("text/plain");
+  return composerComponents.some((component) => component.id === value) ? value as ComposerComponentId : null;
+};
+
+const isComponentDrag = (event: React.DragEvent): boolean =>
+  Array.from(event.dataTransfer.types).includes("application/x-motioner-component");
+
 export const ComposerCanvasOverlay: React.FC<{
   composition: ComposerComposition;
   selectedNodeId: string | null;
@@ -36,9 +45,11 @@ export const ComposerCanvasOverlay: React.FC<{
   onSelect: (nodeId: string | null) => void;
   onPreview: (composition: ComposerComposition | null) => void;
   onCommit: (composition: ComposerComposition) => void;
-}> = ({composition, selectedNodeId, currentFrame, onSelect, onPreview, onCommit}) => {
+  onAdd: (componentId: ComposerComponentId, position: {x: number; y: number}) => void;
+}> = ({composition, selectedNodeId, currentFrame, onSelect, onPreview, onCommit, onAdd}) => {
   const overlayRef = useRef<HTMLDivElement>(null);
   const pointerRef = useRef<PointerSession | null>(null);
+  const [componentDropPosition, setComponentDropPosition] = useState<{x: number; y: number} | null>(null);
 
   const beginPointer = (event: React.PointerEvent, node: ComposerNode, mode: ResizeHandle): void => {
     event.preventDefault();
@@ -123,7 +134,34 @@ export const ComposerCanvasOverlay: React.FC<{
     onPointerUp={endPointer}
     onPointerCancel={endPointer}
     onKeyDown={handleKeyDown}
+    onDragOver={(event) => {
+      if (!isComponentDrag(event)) return;
+      event.preventDefault();
+      event.dataTransfer.dropEffect = "copy";
+      const bounds = event.currentTarget.getBoundingClientRect();
+      setComponentDropPosition({
+        x: clamp((event.clientX - bounds.left) / Math.max(1, bounds.width), 0, 1),
+        y: clamp((event.clientY - bounds.top) / Math.max(1, bounds.height), 0, 1),
+      });
+    }}
+    onDragLeave={(event) => {
+      if (event.currentTarget.contains(event.relatedTarget as Node | null)) return;
+      setComponentDropPosition(null);
+    }}
+    onDrop={(event) => {
+      const componentId = readDraggedComponent(event);
+      event.preventDefault();
+      event.stopPropagation();
+      const bounds = event.currentTarget.getBoundingClientRect();
+      const position = {
+        x: clamp((event.clientX - bounds.left) / Math.max(1, bounds.width), 0, 1),
+        y: clamp((event.clientY - bounds.top) / Math.max(1, bounds.height), 0, 1),
+      };
+      setComponentDropPosition(null);
+      if (componentId) onAdd(componentId, position);
+    }}
   >
+    {componentDropPosition && <div className="composer-component-drop" style={{left: `${componentDropPosition.x * 100}%`, top: `${componentDropPosition.y * 100}%`}} aria-hidden="true"><span>在此创建</span></div>}
     {activeNodes.map((node) => {
       const selected = node.id === selectedNodeId;
       return <div

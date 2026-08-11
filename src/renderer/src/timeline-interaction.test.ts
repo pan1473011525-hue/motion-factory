@@ -1,5 +1,5 @@
 import {describe, expect, it} from "vitest";
-import {chooseMotionDropPhase, frameFromTimelinePointer, snapFrame} from "./timeline-interaction";
+import {chooseMotionDropPhase, frameFromTimelinePointer, motionDurationFromBoundaryFrame, snapFrame} from "./timeline-interaction";
 
 describe("timeline interactions", () => {
   it("maps clicks and drags to exact clamped frames", () => {
@@ -29,5 +29,12 @@ describe("timeline interactions", () => {
   it("respects a custom tolerance", () => {
     expect(snapFrame(25, [30], 2)).toEqual({frame: 25, snapped: false});
     expect(snapFrame(25, [30], 10)).toEqual({frame: 30, snapped: true});
+  });
+
+  it("maps draggable motion boundaries to existing duration fields", () => {
+    expect(motionDurationFromBoundaryFrame("enter-end", 42, 30, 90)).toBe(12);
+    expect(motionDurationFromBoundaryFrame("exit-start", 102, 30, 90)).toBe(18);
+    expect(motionDurationFromBoundaryFrame("enter-end", 5, 30, 90)).toBe(1);
+    expect(motionDurationFromBoundaryFrame("exit-start", 5, 30, 90)).toBe(90);
   });
 });

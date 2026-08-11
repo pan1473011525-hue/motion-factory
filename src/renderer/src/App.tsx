@@ -2,6 +2,8 @@ import {Player, type PlayerRef} from "@remotion/player";
 import {
   ChevronLeft,
   ChevronRight,
+  Copy,
+  Download,
   FilePlus,
   FolderOpen,
   Image,
@@ -14,6 +16,7 @@ import {
   Scan,
   SkipBack,
   SkipForward,
+  Trash2,
   Undo2,
   X,
 } from "lucide-react";
@@ -63,6 +66,7 @@ import {parseCsv} from "./csv";
 import {BatchImportPanel} from "./BatchImportPanel";
 import {inferBatchMappings, type BatchDraft} from "./batch";
 import {RenderQueuePanel} from "./RenderQueuePanel";
+import {placeRectAtPoint} from "./composer-interaction";
 import type {RenderJobState} from "./render-job";
 import {TemplateLibrary} from "./TemplateLibrary";
 import {ComponentLibrary} from "./ComponentLibrary";
@@ -75,6 +79,7 @@ import motionerIcon from "./assets/motioner-icon.png";
 
 type SaveState = "idle" | "dirty" | "saving" | "saved" | "recovery" | "error";
 type PreviewBackground = "checker" | "black" | "white" | "gray" | "image";
+type TemplateInspectorView = "edit" | "export";
 
 const loadStorage = <T,>(key: string, fallback: T): T => {
   try {
@@ -167,6 +172,7 @@ export const App: React.FC = () => {
   const [multiSelectedIds, setMultiSelectedIds] = useState<string[]>([]);
   const [composerPreview, setComposerPreview] = useState<ComposerComposition | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [templateInspectorView, setTemplateInspectorView] = useState<TemplateInspectorView>("edit");
   const revisionRef = useRef(0);
   const playerRef = useRef<PlayerRef>(null);
   const scrubWasPlayingRef = useRef(false);
@@ -449,9 +455,14 @@ export const App: React.FC = () => {
     markChanged({...project, composition});
   };
 
-  const addComposerComponent = (componentId: ComposerComponentId): void => {
+  const addComposerComponent = (componentId: ComposerComponentId, position?: {x: number; y: number}): void => {
     const zIndex = Math.max(-1, ...project.composition.nodes.map((node) => node.transform.zIndex)) + 1;
     const node = createComposerNode(componentId, globalThis.crypto.randomUUID(), project.canvas.durationInFrames, zIndex);
+    if (position) {
+      const placed = placeRectAtPoint(position, node.transform);
+      node.transform.x = placed.x;
+      node.transform.y = placed.y;
+    }
     if (componentId === "template") {
       node.name = manifest.name;
       node.props = {templateId: manifest.id, templateProps: structuredClone(project.props)};
@@ -710,6 +721,7 @@ export const App: React.FC = () => {
       assets: project.composition.nodes.length > 0 ? project.assets : project.assets.filter((asset) => asset.kind === "font"),
     });
     setRecentTemplates((current) => [templateId, ...current.filter((id) => id !== templateId)].slice(0, 8));
+    setTemplateInspectorView("edit");
     playerRef.current?.seekTo(0);
   };
 
@@ -978,7 +990,7 @@ export const App: React.FC = () => {
           <div className="canvas-toolbar">
             <div className="canvas-toolbar-copy"><h1>{project.editorMode === "composer" ? "自由编排画布" : "模板预览"}</h1><p>{project.editorMode === "composer" ? `${project.composition.nodes.length} 个图层 · 拖动定位，控制点缩放` : `${manifest.name} · ${manifest.description}`}</p></div>
             <div className="canvas-actions">
-              {project.editorMode === "composer" && <button type="button" className={`transport-toggle ${isPlaying ? "active" : ""}`} onClick={togglePlayback} title="播放 / 暂停（空格）">{isPlaying ? <Pause /> : <Play />}{isPlaying ? "暂停" : "播放"}<kbd>Space</kbd></button>}
+              <button type="button" className={`transport-toggle ${isPlaying ? "active" : ""}`} onClick={togglePlayback} title="播放 / 暂停（空格）">{isPlaying ? <Pause /> : <Play />}{isPlaying ? "暂停" : project.editorMode === "template" ? "快速预览" : "播放"}<kbd>Space</kbd></button>
               <button type="button" className="icon-btn" onClick={() => playerRef.current?.seekTo(Math.max(0, currentFrame - 1))} title="上一帧" aria-label="上一帧"><ChevronLeft /></button>
               <button type="button" className="icon-btn" onClick={() => playerRef.current?.seekTo(Math.min(project.canvas.durationInFrames - 1, currentFrame + 1))} title="下一帧" aria-label="下一帧"><ChevronRight /></button>
               <button type="button" className="icon-btn" onClick={() => playerRef.current?.seekTo(0)} title="首帧" aria-label="首帧"><SkipBack /></button>
@@ -1017,29 +1029,39 @@ export const App: React.FC = () => {
                 clickToPlay={project.editorMode === "template"}
                 style={{width: "100%", aspectRatio: `${project.canvas.width} / ${project.canvas.height}`}}
               />
-              {project.editorMode === "composer" && <ComposerCanvasOverlay composition={composerScene} selectedNodeId={selectedNodeId} currentFrame={currentFrame} onSelect={selectNodeOnly} onPreview={setComposerPreview} onCommit={commitComposition} />}
+              {project.editorMode === "composer" && <ComposerCanvasOverlay composition={composerScene} selectedNodeId={selectedNodeId} currentFrame={currentFrame} onSelect={selectNodeOnly} onPreview={setComposerPreview} onCommit={commitComposition} onAdd={addComposerComponent} />}
               {safeArea && <div className="safe-area-overlay" aria-hidden="true"><span /></div>}
             </div>
           </div>
-          {project.editorMode === "template" ? <div className="timeline-summary">
-            <button type="button" className="icon-btn" onClick={() => playerRef.current?.seekTo(Math.max(0, currentFrame - 1))} title="上一帧" aria-label="上一帧"><SkipBack /></button>
-            <span>{formatTimecode(currentFrame, project.canvas.fps)}</span>
-            <div className={`timeline-track mode-${manifest.durationMode}`} aria-label={`${manifest.durationMode} 时长模式`}><span className="timeline-intro" /><span className="timeline-hold" /><span className="timeline-outro" /></div>
-            <span>{formatTimecode(project.canvas.durationInFrames - 1, project.canvas.fps)}</span>
-            <span>{currentFrame + 1} / {project.canvas.durationInFrames} 帧</span>
+          {project.editorMode === "template" ? <div className="timeline-summary template-timeline-summary">
+            <button type="button" className={`template-play-button ${isPlaying ? "active" : ""}`} onClick={togglePlayback} title="播放 / 暂停预览" aria-label={isPlaying ? "暂停预览" : "播放预览"}>{isPlaying ? <Pause /> : <Play />}{isPlaying ? "暂停" : "预览"}</button>
+            <button type="button" className="icon-btn" onClick={() => {playerRef.current?.seekTo(0); playerRef.current?.play();}} title="从头预览" aria-label="从头预览"><RotateCcw /></button>
+            <span className="template-timecode">{formatTimecode(currentFrame, project.canvas.fps)}</span>
+            <label className="template-scrubber" style={{"--preview-progress": `${currentFrame / Math.max(1, project.canvas.durationInFrames - 1) * 100}%`} as React.CSSProperties}>
+              <span className="sr-only">预览播放头</span>
+              <span className={`timeline-track mode-${manifest.durationMode}`} aria-hidden="true"><span className="timeline-intro" /><span className="timeline-hold" /><span className="timeline-outro" /><i /></span>
+              <input type="range" min={0} max={project.canvas.durationInFrames - 1} value={currentFrame} aria-valuetext={formatTimecode(currentFrame, project.canvas.fps)} onPointerDown={beginTimelineScrub} onChange={(event) => seekTimelineFrame(event.target.valueAsNumber)} onPointerUp={endTimelineScrub} onPointerCancel={endTimelineScrub} />
+            </label>
+            <span className="template-timecode template-timecode-end">{formatTimecode(project.canvas.durationInFrames - 1, project.canvas.fps)}</span>
+            <span className="template-frame-count">{currentFrame + 1} / {project.canvas.durationInFrames} 帧</span>
           </div> : <ComposerTimeline composition={composerScene} selectedNodeId={selectedNodeId} multiSelectedIds={multiSelectedIds} timeSlots={project.timeSlots} currentFrame={currentFrame} durationInFrames={project.canvas.durationInFrames} fps={project.canvas.fps} isPlaying={isPlaying} onTogglePlayback={togglePlayback} onSelect={selectNodeExtend} onPreview={setComposerPreview} onCommit={commitComposition} onValidate={(scene) => validateComposerComposition(scene, project.assets, project.canvas.durationInFrames) === null} onDelete={deleteSelectedNode} onDeleteRipple={deleteSelectedNodesRipple} onDuplicate={duplicateSelectedNode} onMoveLayer={moveSelectedLayer} onSeekStart={beginTimelineScrub} onSeek={seekTimelineFrame} onSeekEnd={endTimelineScrub} onApplyMotion={applyMotionPresetToNode} onAddTimeSlot={addTimeSlot} onUpdateTimeSlotFrame={updateTimeSlotFrame} onRemoveTimeSlot={removeTimeSlot} segments={project.segments} onAddSegment={addSegment} onUpdateSegmentFrame={updateSegmentFrame} onRemoveSegment={removeSegment} />}
         </section>
 
         <aside className="inspector-panel" aria-label="参数检查器">
-          <div className="panel-heading inspector-title"><div><h2>{project.editorMode === "composer" ? selectedNode?.name ?? "图层属性" : "模板参数"}</h2><p>{project.editorMode === "composer" ? selectedNode ? `${getTemplateManifest(project.template.id).name} · ${selectedNode.componentId}` : "选择图层后编辑属性" : `${manifest.name} · ${manifest.durationMode} · v${manifest.version}`}</p></div><span className="alpha-badge">{project.editorMode === "composer" ? "图层" : "模板"}</span></div>
+          <div className="panel-heading inspector-title"><div><h2>{project.editorMode === "composer" ? selectedNode?.name ?? "图层属性" : templateInspectorView === "edit" ? "快速编辑" : "导出设置"}</h2><p>{project.editorMode === "composer" ? selectedNode ? `${getTemplateManifest(project.template.id).name} · ${selectedNode.componentId}` : "选择图层后编辑属性" : `${manifest.name} · ${manifest.durationMode} · v${manifest.version}`}</p></div><span className="alpha-badge">{project.editorMode === "composer" ? "图层" : templateInspectorView === "edit" ? "模板" : "输出"}</span></div>
+          {project.editorMode === "template" && <div className="inspector-view-tabs" role="tablist" aria-label="模板工作面板">
+            <button type="button" role="tab" aria-selected={templateInspectorView === "edit"} className={templateInspectorView === "edit" ? "active" : ""} onClick={() => setTemplateInspectorView("edit")}>快速编辑</button>
+            <button type="button" role="tab" aria-selected={templateInspectorView === "export"} className={templateInspectorView === "export" ? "active" : ""} onClick={() => setTemplateInspectorView("export")}>导出设置</button>
+          </div>}
+          <div className="inspector-scroll">
           {project.editorMode === "template"
-            ? <Inspector manifest={manifest} props={project.props} assets={project.assets} onChange={updateProp} onPickMedia={pickMedia} />
+            ? templateInspectorView === "edit" ? <div className="inspector-tab-panel" key="template-edit"><Inspector manifest={manifest} props={project.props} assets={project.assets} onChange={updateProp} onPickMedia={pickMedia} /></div> : null
             : <><ComposerInspector node={selectedNode} assets={project.assets} projectDurationInFrames={project.canvas.durationInFrames} onChange={updateSelectedNode} onPickMedia={pickComposerMedia} /><InspectorGroup title="场景" className="scene-editor"><label className="field"><span>背景</span><select value={project.composition.backgroundColor === "transparent" ? "transparent" : "solid"} onChange={(event) => commitComposition({...project.composition, backgroundColor: event.target.value === "transparent" ? "transparent" : "#0B0E12"})}><option value="transparent">透明</option><option value="solid">纯色</option></select></label>{project.composition.backgroundColor !== "transparent" && <label className="field"><span>背景颜色</span><div className="color-control"><input type="color" value={project.composition.backgroundColor} onChange={(event) => commitComposition({...project.composition, backgroundColor: event.target.value})} /><input value={project.composition.backgroundColor.toUpperCase()} onChange={(event) => commitComposition({...project.composition, backgroundColor: event.target.value})} /></div></label>}<label className="field inline-switch"><span>对齐网格</span><input className="switch-control" type="checkbox" checked={project.composition.snapToGrid} onChange={(event) => commitComposition({...project.composition, snapToGrid: event.target.checked})} /></label><label className="field"><span>网格间距</span><select value={project.composition.gridSize} onChange={(event) => commitComposition({...project.composition, gridSize: Number(event.target.value)})}><option value={0.01}>1%</option><option value={0.025}>2.5%</option><option value={0.05}>5%</option><option value={0.1}>10%</option></select></label></InspectorGroup></>}
-          <InspectorGroup title="字体" className="typography-editor"><label className="field"><span>默认字体风格</span><select value={project.typography.fallbackFamily} onChange={(event) => markChanged({...project, typography: {...project.typography, fallbackFamily: event.target.value as MotionProject["typography"]["fallbackFamily"]}})}><option value="system">系统无衬线</option><option value="serif">宋体 / 衬线</option><option value="mono">等宽字体</option></select></label><div className="font-picker"><button type="button" onClick={() => void pickProjectFont()}>{selectedFont ? "替换字体" : "导入字体…"}</button><span title={selectedFont?.path}>{selectedFont?.path.split(/[\\/]/).at(-1) ?? "未导入项目字体"}</span>{selectedFont && <button type="button" className="icon-btn" onClick={() => markChanged({...project, typography: {...project.typography, fontAssetId: ""}})} title="恢复默认字体"><RotateCcw />恢复默认</button>}</div><small className="field-help">字体会作为项目素材保存指纹；请确认拥有相应使用授权。</small></InspectorGroup>
-          <InspectorGroup title="全局动画" className="animation-editor"><label className="field"><span>速度</span><select value={project.animation.speed} onChange={(event) => updateAnimation({speed: Number(event.target.value)})}><option value={0.5}>0.5× 慢速</option><option value={0.75}>0.75×</option><option value={1}>1× 标准</option><option value={1.25}>1.25×</option><option value={1.5}>1.5×</option><option value={2}>2× 快速</option></select></label><label className="field"><span>入场 / 退场边缘帧</span><input type="number" min={6} max={90} value={project.animation.edgeFrames} onChange={(event) => updateAnimation({edgeFrames: Math.min(90, Math.max(6, event.target.valueAsNumber || 18))})} /></label><label className="field inline-switch"><span>减少动态（取消位移与数字滚动）</span><input className="switch-control" type="checkbox" checked={project.animation.reducedMotion} onChange={(event) => updateAnimation({reducedMotion: event.target.checked})} /></label></InspectorGroup>
-          {project.editorMode === "template" ? <InspectorGroup title="工作流" className="preset-editor"><label className="field"><span>参数预设</span><select value="" onChange={(event) => applyParameterPreset(event.target.value)}><option value="">选择已保存预设…</option>{parameterPresets.filter((preset) => preset.templateId === manifest.id).map((preset) => <option key={preset.id} value={preset.id}>{preset.name}</option>)}</select></label><div className="workflow-actions"><button type="button" onClick={saveParameterPreset}>保存当前参数</button><button type="button" onClick={() => void exportParameterPresets()} disabled={parameterPresets.length === 0}>导出预设</button><button type="button" onClick={() => void importParameterPresets()}>导入预设</button><button type="button" onClick={() => void collectProjectAssets()} disabled={project.assets.length === 0}>收集素材</button><button type="button" onClick={() => void relinkProjectAssets("files")} disabled={project.assets.length === 0}>重链文件</button><button type="button" onClick={() => void relinkProjectAssets("folder")} disabled={project.assets.length === 0}>扫描文件夹</button><button type="button" onClick={() => batchCsvRef.current?.click()}>CSV 批量生成</button><input ref={batchCsvRef} className="sr-only" type="file" accept=".csv,text/csv" onChange={(event) => {const file = event.target.files?.[0]; if (file) void importBatchCsv(file);}} /></div><small className="field-help">CSV 会先预览列映射与文件名，一次最多 100 行。</small></InspectorGroup> : <InspectorGroup title="项目素材" className="preset-editor"><div className="workflow-actions"><button type="button" onClick={() => void collectProjectAssets()} disabled={project.assets.length === 0}>收集素材</button><button type="button" onClick={() => void relinkProjectAssets("files")} disabled={project.assets.length === 0}>重链文件</button><button type="button" onClick={() => void relinkProjectAssets("folder")} disabled={project.assets.length === 0}>扫描文件夹</button></div><small className="field-help">图片、视频与字体都保存在项目素材清单中，可集中收集或重新链接。</small></InspectorGroup>}
-          {project.editorMode === "template" && batchDraft && <InspectorGroup title="批量生成" defaultOpen><BatchImportPanel draft={batchDraft} project={project} manifest={manifest} onChange={setBatchDraft} onClose={() => setBatchDraft(null)} onStart={startBatchProjects} /></InspectorGroup>}
-          <InspectorGroup title="输出规格" className="output-editor">
+          {(project.editorMode === "composer" || templateInspectorView === "export") && <InspectorGroup title="字体" className="typography-editor"><label className="field"><span>默认字体风格</span><select value={project.typography.fallbackFamily} onChange={(event) => markChanged({...project, typography: {...project.typography, fallbackFamily: event.target.value as MotionProject["typography"]["fallbackFamily"]}})}><option value="system">系统无衬线</option><option value="serif">宋体 / 衬线</option><option value="mono">等宽字体</option></select></label><div className="font-picker"><button type="button" onClick={() => void pickProjectFont()}>{selectedFont ? "替换字体" : "导入字体…"}</button><span title={selectedFont?.path}>{selectedFont?.path.split(/[\\/]/).at(-1) ?? "未导入项目字体"}</span>{selectedFont && <button type="button" className="icon-btn" onClick={() => markChanged({...project, typography: {...project.typography, fontAssetId: ""}})} title="恢复默认字体"><RotateCcw />恢复默认</button>}</div><small className="field-help">字体会作为项目素材保存指纹；请确认拥有相应使用授权。</small></InspectorGroup>}
+          {(project.editorMode === "composer" || templateInspectorView === "export") && <InspectorGroup title="全局动画" className="animation-editor"><label className="field"><span>速度</span><select value={project.animation.speed} onChange={(event) => updateAnimation({speed: Number(event.target.value)})}><option value={0.5}>0.5× 慢速</option><option value={0.75}>0.75×</option><option value={1}>1× 标准</option><option value={1.25}>1.25×</option><option value={1.5}>1.5×</option><option value={2}>2× 快速</option></select></label><label className="field"><span>入场 / 退场边缘帧</span><input type="number" min={6} max={90} value={project.animation.edgeFrames} onChange={(event) => updateAnimation({edgeFrames: Math.min(90, Math.max(6, event.target.valueAsNumber || 18))})} /></label><label className="field inline-switch"><span>减少动态（取消位移与数字滚动）</span><input className="switch-control" type="checkbox" checked={project.animation.reducedMotion} onChange={(event) => updateAnimation({reducedMotion: event.target.checked})} /></label></InspectorGroup>}
+          {project.editorMode === "template" && templateInspectorView === "export" ? <InspectorGroup title="工作流与批量" className="preset-editor"><label className="field"><span>参数预设</span><select value="" onChange={(event) => applyParameterPreset(event.target.value)}><option value="">选择已保存预设…</option>{parameterPresets.filter((preset) => preset.templateId === manifest.id).map((preset) => <option key={preset.id} value={preset.id}>{preset.name}</option>)}</select></label><div className="workflow-actions"><button type="button" onClick={saveParameterPreset}>保存当前参数</button><button type="button" onClick={() => void exportParameterPresets()} disabled={parameterPresets.length === 0}>导出预设</button><button type="button" onClick={() => void importParameterPresets()}>导入预设</button><button type="button" onClick={() => void collectProjectAssets()} disabled={project.assets.length === 0}>收集素材</button><button type="button" onClick={() => void relinkProjectAssets("files")} disabled={project.assets.length === 0}>重链文件</button><button type="button" onClick={() => void relinkProjectAssets("folder")} disabled={project.assets.length === 0}>扫描文件夹</button><button type="button" onClick={() => batchCsvRef.current?.click()}>CSV 批量生成</button><input ref={batchCsvRef} className="sr-only" type="file" accept=".csv,text/csv" onChange={(event) => {const file = event.target.files?.[0]; if (file) void importBatchCsv(file);}} /></div><small className="field-help">高级工具默认收纳在导出设置中；CSV 一次最多 100 行。</small></InspectorGroup> : project.editorMode === "composer" ? <InspectorGroup title="项目素材" className="preset-editor"><div className="workflow-actions"><button type="button" onClick={() => void collectProjectAssets()} disabled={project.assets.length === 0}>收集素材</button><button type="button" onClick={() => void relinkProjectAssets("files")} disabled={project.assets.length === 0}>重链文件</button><button type="button" onClick={() => void relinkProjectAssets("folder")} disabled={project.assets.length === 0}>扫描文件夹</button></div><small className="field-help">图片、视频与字体都保存在项目素材清单中，可集中收集或重新链接。</small></InspectorGroup> : null}
+          {project.editorMode === "template" && templateInspectorView === "export" && batchDraft && <InspectorGroup title="批量生成" defaultOpen><BatchImportPanel draft={batchDraft} project={project} manifest={manifest} onChange={setBatchDraft} onClose={() => setBatchDraft(null)} onStart={startBatchProjects} /></InspectorGroup>}
+          {(project.editorMode === "composer" || templateInspectorView === "export") && <InspectorGroup title="输出规格" className="output-editor" defaultOpen={project.editorMode === "template"}>
             <label className="field"><span>画布预设</span><select value={CANVAS_PRESETS.find((preset) => preset.width === project.canvas.width && preset.height === project.canvas.height)?.id ?? "custom"} onChange={(event) => {
               const preset = CANVAS_PRESETS.find((candidate) => candidate.id === event.target.value);
               if (preset) updateCanvas({width: preset.width, height: preset.height});
@@ -1051,7 +1073,17 @@ export const App: React.FC = () => {
             <label className="field inline-switch"><span>分段导出</span><input className="switch-control" type="checkbox" checked={project.exportOptions.segmented} disabled={!segmentedExportAvailable} onChange={(event) => markChanged({...project, exportOptions: {...project.exportOptions, segmented: event.target.checked}})} /><small className="field-help">{selectedExportPreset.kind !== "video" ? "仅视频格式支持多文件分段导出" : project.segments.length === 0 ? "先在时间线播放头位置添加分段点" : `将输出 ${project.segments.length + 1} 个视频和 sections.json`}</small></label>
             <label className="field"><span>目标重名时</span><select value={project.exportOptions.conflictPolicy} onChange={(event) => markChanged({...project, exportOptions: {...project.exportOptions, conflictPolicy: event.target.value as MotionProject["exportOptions"]["conflictPolicy"]}})}><option value="version">自动追加版本号</option><option value="replace">验证成功后替换</option><option value="skip">跳过，不生成</option></select></label>
             <dl className="output-summary"><div><dt>色彩空间</dt><dd>Rec.709 SDR</dd></div><div><dt>透明通道</dt><dd>{selectedExportPreset.alpha ? "保留" : "不包含（深色审看底）"}</dd></div><div><dt>输出</dt><dd>{segmentedExportEnabled ? `${project.segments.length + 1} 个分段文件` : "1 个完整文件"}</dd></div><div><dt>预计空间</dt><dd>约 {formatBytes(estimateExportBytes(project, selectedExportPreset.id))}</dd></div></dl>
-          </InspectorGroup>
+          </InspectorGroup>}
+          </div>
+          {project.editorMode === "template" ? <div className="inspector-action-bar">
+            <div><strong>{templateInspectorView === "edit" ? "修改即实时预览" : selectedExportPreset.label}</strong><span>{templateInspectorView === "edit" ? `${manifest.fields.length} 项可编辑参数` : `预计约 ${formatBytes(estimateExportBytes(project, selectedExportPreset.id))}`}</span></div>
+            <button type="button" className="inspector-secondary-action" onClick={() => {playerRef.current?.seekTo(0); playerRef.current?.play();}} title="从头播放当前模板"><Play />预览</button>
+            <button type="button" className="inspector-primary-action" onClick={() => void startRender()} disabled={!canRender} title={renderError ?? selectedExportPreset.description}><Download />导出</button>
+          </div> : <div className="inspector-action-bar composer-inspector-actions">
+            <div><strong>{selectedNode ? selectedNode.name : "未选择图层"}</strong><span>{multiSelectedIds.length > 1 ? `已选择 ${multiSelectedIds.length} 个图层` : selectedNode ? "方向键微调 · Shift 加速" : "从画布或时间线选择"}</span></div>
+            <button type="button" className="inspector-secondary-action" onClick={duplicateSelectedNode} disabled={!selectedNodeId} title="复制选中图层" aria-label="复制选中图层"><Copy /></button>
+            <button type="button" className="inspector-danger-action" onClick={deleteSelectedNode} disabled={!selectedNodeId} title="删除选中图层" aria-label="删除选中图层"><Trash2 /></button>
+          </div>}
         </aside>
       </main>
 
