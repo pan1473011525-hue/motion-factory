@@ -98,7 +98,7 @@ export const ComposerInspector: React.FC<{
     {orderedSections.map((section) => {
       const fields = definition.fields.filter((field) => field.section === section);
       if (fields.length === 0) return null;
-      return <InspectorGroup title={sectionLabels[section]} key={section}>{fields.map((field) => <label className={`field field-${field.control}`} key={field.key}><span>{field.label}</span><FieldControl field={field} value={node.props[field.key]} defaultValue={definition.defaultProps[field.key]} assets={assets} onChange={(value) => updateProp(field.key, value)} onPickMedia={() => onPickMedia(field as Extract<InspectorField, {control: "media"}>)} />{field.help && <small className="field-help">{field.help}</small>}</label>)}</InspectorGroup>;
+      return <InspectorGroup title={sectionLabels[section]} key={section} defaultOpen>{fields.map((field) => <label className={`field field-${field.control}`} key={field.key}><span>{field.label}</span><FieldControl field={field} value={node.props[field.key]} defaultValue={definition.defaultProps[field.key]} assets={assets} onChange={(value) => updateProp(field.key, value)} onPickMedia={() => onPickMedia(field as Extract<InspectorField, {control: "media"}>)} />{field.help && <small className="field-help">{field.help}</small>}</label>)}</InspectorGroup>;
     })}
     <InspectorGroup title="时间" className="timing-editor">
       <CompactPropertyRow label="开始帧"><RangeNumberControl ariaLabel="开始帧" value={node.timing.from} min={0} max={Math.max(0, projectDurationInFrames - 1)} resetValue={0} onChange={(from) => updateTiming({from, durationInFrames: Math.min(node.timing.durationInFrames, projectDurationInFrames - from)})} /></CompactPropertyRow>

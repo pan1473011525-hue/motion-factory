@@ -17,10 +17,15 @@ scene.nodes = [
   createComposerNode("progress", "progress", durationInFrames, 3),
   createComposerNode("bar-chart", "chart", durationInFrames, 4),
   createComposerNode("image", "image", durationInFrames, 5),
-  createComposerNode("lottie", "lottie", durationInFrames, 6),
+  createComposerNode("list-reveal", "list", durationInFrames, 6),
+  createComposerNode("card-stack", "cards", durationInFrames, 7),
+  createComposerNode("skeleton-reveal", "skeleton", durationInFrames, 8),
+  createComposerNode("svg-trace", "trace", durationInFrames, 9),
+  createComposerNode("odometer-roll", "odometer", durationInFrames, 10),
+  createComposerNode("lottie", "lottie", durationInFrames, 11),
 ];
-const [surface, title, stat, progress, chart, image, lottieNode] = scene.nodes;
-if (!surface || !title || !stat || !progress || !chart || !image || !lottieNode) throw new Error("无法创建 Composer 视觉测试场景");
+const [surface, title, stat, progress, chart, image, list, cards, skeleton, trace, odometer, lottieNode] = scene.nodes;
+if (!surface || !title || !stat || !progress || !chart || !image || !list || !cards || !skeleton || !trace || !odometer || !lottieNode) throw new Error("无法创建 Composer 视觉测试场景");
 surface.name = "底板";
 surface.transform = {...surface.transform, x: 0.04, y: 0.07, width: 0.92, height: 0.86, opacity: 0.92};
 surface.props = {...surface.props, fill: "#111821", borderColor: "#314052", borderWidth: 2, radius: 34};
@@ -44,6 +49,16 @@ image.motion.enter = "blur";
 lottieNode.transform = {...lottieNode.transform, x: 0.56, y: 0.7, width: 0.18, height: 0.18};
 lottieNode.props = {...lottieNode.props, assetId: "loader-ring", loop: true};
 lottieNode.motion.enter = "fade";
+list.transform = {...list.transform, x: 0.05, y: 0.08, width: 0.3, height: 0.4};
+list.motion.enter = "none";
+cards.transform = {...cards.transform, x: 0.38, y: 0.06, width: 0.3, height: 0.34};
+cards.motion.enter = "none";
+skeleton.transform = {...skeleton.transform, x: 0.72, y: 0.06, width: 0.24, height: 0.3};
+skeleton.motion.enter = "none";
+trace.transform = {...trace.transform, x: 0.05, y: 0.52, width: 0.28, height: 0.28};
+trace.motion.enter = "none";
+odometer.transform = {...odometer.transform, x: 0.38, y: 0.44, width: 0.3, height: 0.18};
+odometer.motion.enter = "none";
 
 const fixturePath = join(root, "scripts", "fixtures", "media-sample.svg");
 const fixtureAsset = {
