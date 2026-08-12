@@ -2,7 +2,7 @@
 
 Motioner 是一款面向 Apple Silicon macOS 与 Windows x64 的本地透明动效生成器。既可以选择模板后填写文字、数据或素材，也可以从组件库自由搭建画面、安排图层时序和动效；最终生成可直接放入剪辑时间线的透明 ProRes 4444、ProRes 4444 XQ 或 PNG 序列，也可生成带深色底的 H.264 审看版。两端共用同一套 React 工作台和项目格式，仅窗口生命周期、快捷键、系统定位文案与离线渲染二进制按平台适配。
 
-当前版本：`1.3.1`。应用、Dock 与安装包已使用 Motioner 正式图标。
+当前版本：`1.4.0`。应用、Dock 与安装包已使用 Motioner 正式图标。
 
 ## 已交付能力
 
@@ -70,10 +70,10 @@ pnpm package:win
 输出位置：
 
 - `release/mac-arm64/Motioner.app`
-- `release/Motioner-1.3.1-arm64.dmg`
+- `release/Motioner-1.4.0-arm64.dmg`
 - `release/Motioner-integrity.json`
 - `release/win-unpacked/Motioner.exe`
-- `release/Motioner-1.3.1-x64-windows-installer.exe`
+- `release/Motioner-1.4.0-x64-windows-installer.exe`
 - `release/Motioner-integrity-windows-x64.json`
 
 未签名构建仅供测试和自用。公开分发前，macOS 需要 Developer ID、Hardened Runtime 和 Notarization；Windows 需要代码签名证书，否则可能触发 SmartScreen 安全提示。Windows 开发、打包和实机验收详见 [Windows 双端开发与打包](docs/WINDOWS_DEVELOPMENT.md)。
