@@ -40,6 +40,12 @@ Electron 本身采用 MIT License，并包含 Chromium、Node.js 及其他各自
 
 精确版本以根目录 `package.json` 与 `pnpm-lock.yaml` 为准。`pnpm install --frozen-lockfile` 用于防止构建时静默漂移版本。
 
+## 内置动效组件（video-shotcraft）
+
+Motioner 1.4 起内置来自 [Vincentwei1021/video-shotcraft](https://github.com/Vincentwei1021/video-shotcraft)（Apache License 2.0）的 12 个模板：8 个转场遮罩（百叶窗、时钟、光圈、墨染、撕裂、线性/径向/锥形渐变）与 4 个排版模板（终端打字机、打字机纠错、乱码解码、翻页板）。
+
+所有内置组件均已完成参数化与坐标系适配（详见 `docs/TEMPLATE_INGESTION_PLAN.md`），每个组件文件头保留上游 Apache 版权声明。上游许可证文本：https://www.apache.org/licenses/LICENSE-2.0
+
 ## 项目素材与字体
 
 Motioner 不内置第三方商业字体、图库、音乐或演示视频。模板使用 macOS 系统字体栈和程序生成的 SVG/形状。用户导入素材的版权与使用授权由用户自行负责；“收集素材”只复制文件，不授予新权利。
