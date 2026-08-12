@@ -4,34 +4,67 @@ const {existsSync} = require("node:fs");
 const {join} = require("node:path");
 
 const run = promisify(execFile);
+const archNames = ["ia32", "x64", "armv7l", "arm64", "universal"];
+
+const getTarget = (platform, arch) => {
+  if (platform === "darwin" && (arch === "arm64" || arch === "x64")) {
+    return {
+      compositorPackage: `compositor-darwin-${arch}`,
+      executableNames: ["remotion", "ffmpeg", "ffprobe"],
+      browserExecutable: "chrome-headless-shell",
+    };
+  }
+  if (platform === "win32" && arch === "x64") {
+    return {
+      compositorPackage: "compositor-win32-x64-msvc",
+      executableNames: ["remotion.exe", "ffmpeg.exe", "ffprobe.exe"],
+      browserExecutable: "chrome-headless-shell.exe",
+    };
+  }
+  return null;
+};
 
 module.exports = async (context) => {
-  if (context.electronPlatformName !== "darwin") return;
-  const infoPlist = join(context.appOutDir, "Motioner.app", "Contents", "Info.plist");
-  await run("/usr/libexec/PlistBuddy", [
-    "-c",
-    "Set :NSAppTransportSecurity:NSAllowsArbitraryLoads false",
-    infoPlist,
-  ]);
+  const platform = context.electronPlatformName;
+  const arch = typeof context.arch === "number" ? archNames[context.arch] : String(context.arch);
+  const target = getTarget(platform, arch);
+  if (!target) throw new Error(`Motioner 不支持打包目标：${platform}-${arch}`);
 
-  // Remotion compositor 原生二进制必须位于 app.asar.unpacked,运行时才能加载。
-  // 打包期校验,失败立即报错,避免发布后首次导出才暴露缺失。
-  // 注意:context.arch 是 electron-builder 的 Arch 枚举(数字),不能直接与字符串比较,
-  // 用 process.arch 判断打包机架构(本项目仅本机 arm64 打包)。
-  const architecture = process.arch === "arm64" ? "arm64" : "x64";
-  const compositor = join(
-    context.appOutDir,
-    "Motioner.app",
-    "Contents",
-    "Resources",
-    "app.asar.unpacked",
-    "node_modules",
-    "@remotion",
-    `compositor-darwin-${architecture}`,
-  );
-  if (!existsSync(join(compositor, "remotion"))) {
+  const appRoot = platform === "darwin"
+    ? join(context.appOutDir, "Motioner.app")
+    : context.appOutDir;
+  const resources = platform === "darwin"
+    ? join(appRoot, "Contents", "Resources")
+    : join(appRoot, "resources");
+
+  if (platform === "darwin") {
+    const infoPlist = join(appRoot, "Contents", "Info.plist");
+    await run("/usr/libexec/PlistBuddy", [
+      "-c",
+      "Set :NSAppTransportSecurity:NSAllowsArbitraryLoads false",
+      infoPlist,
+    ]);
+  }
+
+  const compositor = platform === "win32"
+    ? join(resources, "remotion-binaries")
+    : join(
+      resources,
+      "app.asar.unpacked",
+      "node_modules",
+      "@remotion",
+      target.compositorPackage,
+    );
+  const criticalFiles = [
+    ...target.executableNames.map((name) => join(compositor, name)),
+    join(resources, "chrome-headless-shell", target.browserExecutable),
+    join(resources, "remotion", "index.html"),
+  ];
+  const missing = criticalFiles.filter((path) => !existsSync(path));
+  if (missing.length > 0) {
     throw new Error(
-      `未找到 Remotion compositor 原生二进制:${join(compositor, "remotion")}。请确认 package.json 的 build.asarUnpack 包含 node_modules/@remotion/**/*`,
+      `Motioner ${platform}-${arch} 离线运行时不完整：\n${missing.join("\n")}\n`
+      + "请先运行对应平台的 prepare 脚本，并确认 build.asarUnpack 包含 node_modules/@remotion/**/*。",
     );
   }
 };

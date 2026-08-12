@@ -1,7 +1,7 @@
 {
   "name": "motioner",
   "version": "1.3.1",
-  "description": "Motioner — macOS 参数化透明动效生成器",
+  "description": "Motioner — macOS / Windows 参数化透明动效生成器",
   "author": "monarch",
   "main": "./out/main/index.js",
   "repository": {},
@@ -50,7 +50,11 @@
     "build": "pnpm check && pnpm remotion:bundle && electron-vite build",
     "preview": "electron-vite preview",
     "package:mac": "pnpm build && electron-builder --mac dir --arm64",
-    "package:dmg": "pnpm build && electron-builder --mac dmg --arm64 && pnpm verify:package && pnpm test:package-e2e",
+    "package:dmg": "pnpm build && electron-builder --mac dmg --arm64 && pnpm verify:package:mac && pnpm test:package-e2e",
+    "prepare:win": "node scripts/prepare-windows-runtime.mjs",
+    "package:win:dir": "pnpm prepare:win && pnpm build && electron-builder --win dir --x64 && pnpm verify:package:win",
+    "package:win": "pnpm prepare:win && pnpm build && electron-builder --win nsis --x64 && pnpm verify:package:win:installer && pnpm clean:package:win",
+    "clean:package:win": "node scripts/clean-windows-package.mjs",
     "test": "vitest run",
     "test:templates": "vitest run src/templates packages/template-sdk",
     "visual:build-tool": "esbuild scripts/render-template-stills.ts --bundle --platform=node --format=esm --external:@remotion/renderer --outfile=output/tools/render-template-stills.mjs",
@@ -64,7 +68,10 @@
     "test:cancel": "electron scripts/export-smoke-main.cjs --cancel",
     "test:package-e2e": "node scripts/package-e2e.mjs",
     "template:new": "node scripts/create-template.mjs",
-    "verify:package": "node scripts/verify-package.mjs",
+    "verify:package": "pnpm verify:package:mac",
+    "verify:package:mac": "node scripts/verify-package.mjs --platform darwin --arch arm64",
+    "verify:package:win": "node scripts/verify-package.mjs --platform win32 --arch x64",
+    "verify:package:win:installer": "node scripts/verify-package.mjs --platform win32 --arch x64 --installer",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src packages electron.vite.config.ts",
     "check": "pnpm lint && pnpm typecheck && pnpm test",
@@ -85,10 +92,6 @@
       {
         "from": "dist/remotion",
         "to": "remotion"
-      },
-      {
-        "from": "vendor/chrome-headless-shell",
-        "to": "chrome-headless-shell"
       }
     ],
     "asarUnpack": [
@@ -98,6 +101,12 @@
       "category": "public.app-category.video",
       "identity": null,
       "icon": "resources/motioner-icon.png",
+      "extraResources": [
+        {
+          "from": "vendor/chrome-headless-shell",
+          "to": "chrome-headless-shell"
+        }
+      ],
       "extendInfo": {
         "NSAppTransportSecurity": {
           "NSAllowsArbitraryLoads": false,
@@ -117,6 +126,35 @@
       "target": [
         "dir"
       ]
+    },
+    "win": {
+      "icon": "resources/motioner-icon.png",
+      "target": [
+        "nsis"
+      ],
+      "artifactName": "${productName}-${version}-${arch}-windows.${ext}",
+      "extraResources": [
+        {
+          "from": "vendor/chrome-headless-shell-win32-x64",
+          "to": "chrome-headless-shell"
+        },
+        {
+          "from": "vendor/remotion-compositor-win32-x64-msvc",
+          "to": "remotion-binaries"
+        },
+        {
+          "from": "resources/motioner-icon.png",
+          "to": "motioner-icon.png"
+        }
+      ]
+    },
+    "nsis": {
+      "artifactName": "${productName}-${version}-${arch}-windows-installer.${ext}",
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Motioner"
     }
   },
   "sideEffects": [

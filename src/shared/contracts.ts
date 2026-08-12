@@ -177,8 +177,10 @@ export type RecoverySnapshot = {
 
 export type MenuCommand = "new" | "open" | "save" | "save-as";
 export type CloseProjectDecision = "save" | "discard" | "cancel";
+export type DesktopPlatform = "darwin" | "win32";
 
 export type MotionerApi = {
+  platform: DesktopPlatform;
   newProject: () => Promise<ProjectSession>;
   getLastProject: () => Promise<ProjectSession | null>;
   openProject: () => Promise<ProjectOperationResult>;
@@ -198,7 +200,7 @@ export type MotionerApi = {
   relinkProjectAssets: (request: z.infer<typeof relinkAssetsRequestSchema>) => Promise<RelinkAssetsResult>;
   exportParameterPresets: (collection: ParameterPresetCollection) => Promise<boolean>;
   importParameterPresets: () => Promise<PresetImportResult>;
-  revealInFinder: (path: string) => Promise<boolean>;
+  revealInFileManager: (path: string) => Promise<boolean>;
   onMenuCommand: (listener: (command: MenuCommand) => void) => () => void;
   startRender: (request: RenderStartRequest) => Promise<StartRenderResult>;
   startBatchRender: (request: BatchRenderStartRequest) => Promise<StartBatchRenderResult>;

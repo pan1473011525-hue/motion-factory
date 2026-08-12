@@ -4,8 +4,14 @@ import {mkdir, readFile} from "node:fs/promises";
 import {join} from "node:path";
 
 const root = join(import.meta.dirname, "..");
-const executable = join(root, "release", "mac-arm64", "Motioner.app", "Contents", "MacOS", "Motioner");
-if (!existsSync(executable)) throw new Error("请先运行 pnpm package:mac 或 package:dmg");
+const executable = process.platform === "win32"
+  ? join(root, "release", "win-unpacked", "Motioner.exe")
+  : join(root, "release", `mac-${process.arch}`, "Motioner.app", "Contents", "MacOS", "Motioner");
+if (!existsSync(executable)) {
+  throw new Error(process.platform === "win32"
+    ? "请先运行 pnpm package:win:dir 或 package:win"
+    : "请先运行 pnpm package:mac 或 package:dmg");
+}
 const directory = join(root, "output", "package-e2e", new Date().toISOString().replaceAll(":", "-"));
 await mkdir(directory, {recursive: true});
 const output = join(directory, "packaged-review-segments");

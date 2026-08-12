@@ -49,11 +49,16 @@ import {validateComposerComposition} from "../composer/registry";
 import {writeAppLog} from "./logger";
 import {fingerprintFile} from "./asset-fingerprint";
 import {listFilesRecursively, matchAssetsByName} from "./asset-relink";
+import {safeFileStem} from "./file-names";
 import {prepareMediaCache} from "./media-cache";
 import {decideProjectCloseAction} from "./project-close-decision";
 import {resolveOutputConflict} from "./output-conflict";
 import {RenderJobQueue} from "./render-queue";
 import {readRecentProjects, recordRecentProject} from "./recent-projects";
+import {
+  getRuntimePlatformDescriptor,
+  hasCompleteRuntimeBinaries,
+} from "./runtime-platform";
 import {
   readProjectFile,
   readRecoveryFile,
@@ -116,9 +121,6 @@ const requestRendererCloseDecision = (window: BrowserWindow): Promise<CloseProje
 
 const touchProject = (project: MotionProject, name = project.name): MotionProject =>
   parseMotionProject({...project, name, updatedAt: now()});
-
-const safeFileStem = (value: string): string =>
-  value.trim().replace(/[\\/:*?"<>|]+/gu, "-").replace(/\s+/gu, " ").slice(0, 72) || "Motioner-导出";
 
 const getOutputSuffix = (presetId: MotionProject["exportPresetId"]): string => {
   if (presetId === "prores-4444") return "prores4444";
@@ -184,37 +186,43 @@ const getPackagedBrowserExecutable = (): string | null => {
   if (!app.isPackaged) {
     return null;
   }
-
-  const executable = join(
-    process.resourcesPath,
-    "chrome-headless-shell",
-    "chrome-headless-shell",
-  );
+  const descriptor = getRuntimePlatformDescriptor();
+  if (!descriptor) return null;
+  const executable = join(process.resourcesPath, "chrome-headless-shell", descriptor.browserExecutable);
 
   return existsSync(executable) ? executable : null;
 };
 
 const getBinariesDirectory = (): string | null => {
-  const architecture = process.arch === "arm64" ? "arm64" : "x64";
+  const descriptor = getRuntimePlatformDescriptor();
+  if (!descriptor) return null;
   const directory = app.isPackaged
-    ? join(
-      process.resourcesPath,
-      "app.asar.unpacked",
-      "node_modules",
-      "@remotion",
-      `compositor-darwin-${architecture}`,
-    )
+    ? descriptor.platform === "win32"
+      ? join(process.resourcesPath, "remotion-binaries")
+      : join(
+        process.resourcesPath,
+        "app.asar.unpacked",
+        "node_modules",
+        "@remotion",
+        descriptor.compositorPackage,
+      )
     : (() => {
+      if (descriptor.platform === "win32") {
+        const vendoredPackage = join(app.getAppPath(), "vendor", "remotion-compositor-win32-x64-msvc");
+        if (existsSync(vendoredPackage)) return vendoredPackage;
+      }
+      const directPackage = join(app.getAppPath(), "node_modules", "@remotion", descriptor.compositorPackage);
+      if (existsSync(directPackage)) return directPackage;
       const pnpmRoot = join(app.getAppPath(), "node_modules", ".pnpm");
       if (!existsSync(pnpmRoot)) return "";
       const packageFolder = readdirSync(pnpmRoot).find((entry) =>
-        entry.startsWith(`@remotion+compositor-darwin-${architecture}@`));
+        entry.startsWith(`@remotion+${descriptor.compositorPackage}@`));
       return packageFolder
-        ? join(pnpmRoot, packageFolder, "node_modules", "@remotion", `compositor-darwin-${architecture}`)
+        ? join(pnpmRoot, packageFolder, "node_modules", "@remotion", descriptor.compositorPackage)
         : "";
     })();
 
-  return existsSync(join(directory, "remotion")) ? directory : null;
+  return hasCompleteRuntimeBinaries(directory, descriptor) ? directory : null;
 };
 
 const emitRenderEvent = (event: RenderEvent): void => {
@@ -322,7 +330,7 @@ const sendMenuCommand = (command: MenuCommand): void => {
 
 const installApplicationMenu = (): void => {
   const template: MenuItemConstructorOptions[] = [
-    {
+    ...(process.platform === "darwin" ? [{
       label: app.name,
       submenu: [
         {role: "about"},
@@ -333,7 +341,7 @@ const installApplicationMenu = (): void => {
         {type: "separator"},
         {role: "quit"},
       ],
-    },
+    } satisfies MenuItemConstructorOptions] : []),
     {
       label: "文件",
       submenu: [
@@ -347,7 +355,7 @@ const installApplicationMenu = (): void => {
           click: () => sendMenuCommand("save-as"),
         },
         {type: "separator"},
-        {role: "close"},
+        {role: process.platform === "darwin" ? "close" : "quit"},
       ],
     },
     {
@@ -380,6 +388,12 @@ const createWindow = (): void => {
   quitRequested = false;
   closePromptActive = false;
   rendererHasUnsavedChanges = false;
+  const isMac = process.platform === "darwin";
+  const windowIcon = process.platform === "win32"
+    ? app.isPackaged
+      ? join(process.resourcesPath, "motioner-icon.png")
+      : join(app.getAppPath(), "resources", "motioner-icon.png")
+    : undefined;
   const window = new BrowserWindow({
     width: 1440,
     height: 900,
@@ -387,8 +401,10 @@ const createWindow = (): void => {
     minHeight: 760,
     show: false,
     backgroundColor: "#181818",
-    titleBarStyle: "hiddenInset",
-    trafficLightPosition: {x: 18, y: 18},
+    title: "Motioner",
+    ...(isMac
+      ? {titleBarStyle: "hiddenInset", trafficLightPosition: {x: 18, y: 18}}
+      : {icon: windowIcon, autoHideMenuBar: true, useContentSize: true}),
     webPreferences: {
       preload: join(__dirname, "../preload/index.js"),
       contextIsolation: true,
@@ -397,6 +413,7 @@ const createWindow = (): void => {
     },
   });
   mainWindow = window;
+  if (!isMac) window.setMenuBarVisibility(false);
 
   window.on("close", (event) => {
     if (allowWindowClose) return;
@@ -448,7 +465,7 @@ const createWindow = (): void => {
 const chooseProjectSavePath = async (project: MotionProject): Promise<string | null> => {
   const result = await dialog.showSaveDialog(mainWindow!, {
     title: "保存 Motioner 项目",
-    defaultPath: `${project.name}.mfxproj`,
+    defaultPath: `${safeFileStem(project.name)}.mfxproj`,
     filters: [{name: "Motioner 项目", extensions: ["mfxproj"]}],
   });
 
@@ -730,9 +747,9 @@ ipcMain.handle("render:start", async (_event, rawRequest): Promise<StartRenderRe
   const request = renderStartRequestSchema.parse(rawRequest);
   const project = prepareProjectForRender(request.project);
   const preset = getExportPreset(project.exportPresetId);
-  const baseName = currentProjectPath
+  const baseName = safeFileStem(currentProjectPath
     ? basename(currentProjectPath, extname(currentProjectPath))
-    : project.name || "Motioner-导出";
+    : project.name || "Motioner-导出");
   const suffix = getOutputSuffix(preset.id);
   const segmented = usesSegmentedOutput(project);
   const defaultName = segmented

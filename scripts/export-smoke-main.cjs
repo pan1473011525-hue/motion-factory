@@ -5,21 +5,34 @@ const {join} = require("node:path");
 const {app, utilityProcess} = require("electron");
 
 const projectRoot = join(__dirname, "..");
+const isWindows = process.platform === "win32";
+const compositorPackage = isWindows
+  ? "compositor-win32-x64-msvc"
+  : `compositor-darwin-${process.arch === "arm64" ? "arm64" : "x64"}`;
+const runtimeBinary = (name) => `${name}${isWindows ? ".exe" : ""}`;
+const browserExecutable = isWindows
+  ? join(projectRoot, "vendor", "chrome-headless-shell-win32-x64", "chrome-headless-shell.exe")
+  : join(projectRoot, "vendor", "chrome-headless-shell", "chrome-headless-shell");
 
 const findBinariesDirectory = () => {
-  const architecture = process.arch === "arm64" ? "arm64" : "x64";
+  if (isWindows) {
+    const vendored = join(projectRoot, "vendor", "remotion-compositor-win32-x64-msvc");
+    if (existsSync(join(vendored, runtimeBinary("ffprobe")))) return vendored;
+  }
+  const direct = join(projectRoot, "node_modules", "@remotion", compositorPackage);
+  if (existsSync(join(direct, runtimeBinary("ffprobe")))) return direct;
   const pnpmRoot = join(projectRoot, "node_modules", ".pnpm");
   const packageFolder = readdirSync(pnpmRoot).find((entry) =>
-    entry.startsWith(`@remotion+compositor-darwin-${architecture}@`));
+    entry.startsWith(`@remotion+${compositorPackage}@`));
   if (!packageFolder) throw new Error("未找到 Remotion 媒体二进制");
   const directory = join(
     pnpmRoot,
     packageFolder,
     "node_modules",
     "@remotion",
-    `compositor-darwin-${architecture}`,
+    compositorPackage,
   );
-  if (!existsSync(join(directory, "ffprobe"))) throw new Error("FFprobe 不存在");
+  if (!existsSync(join(directory, runtimeBinary("ffprobe")))) throw new Error("FFprobe 不存在");
   return directory;
 };
 
@@ -80,7 +93,7 @@ const run = async () => {
   if (productionMode) {
     const videoPoster = join(outputRoot, "motioner-video-poster.png");
     writeFileSync(videoPoster, Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=", "base64"));
-    const generated = spawnSync(join(binariesDirectory, "ffmpeg"), ["-y", "-v", "error", "-loop", "1", "-i", videoPoster, "-t", "2", "-vf", "scale=640:360", "-r", "30", "-c:v", "libx264", "-pix_fmt", "yuv420p", videoFixture], {cwd: binariesDirectory, encoding: "utf8"});
+    const generated = spawnSync(join(binariesDirectory, runtimeBinary("ffmpeg")), ["-y", "-v", "error", "-loop", "1", "-i", videoPoster, "-t", "2", "-vf", "scale=640:360", "-r", "30", "-c:v", "libx264", "-pix_fmt", "yuv420p", videoFixture], {cwd: binariesDirectory, encoding: "utf8"});
     if (generated.status !== 0) throw new Error(`无法生成视频测试素材：${generated.stderr}`);
   }
   const worker = utilityProcess.fork(join(projectRoot, "out", "main", "render-worker.js"), [], {
@@ -96,7 +109,7 @@ const run = async () => {
       fps: {numerator: 30_000, denominator: 1_001},
       durationInFrames: 75,
       typography: {fontAssetId: "fixture-font", fallbackFamily: "mono"},
-      assets: [{id: "fixture-font", path: "/System/Library/Fonts/SFNSMono.ttf", kind: "font"}],
+      assets: [{id: "fixture-font", path: isWindows ? join(process.env.WINDIR || "C:\\Windows", "Fonts", "consola.ttf") : "/System/Library/Fonts/SFNSMono.ttf", kind: "font"}],
     },
     {
       name: "1080p-59.94-Review",
@@ -245,7 +258,7 @@ const run = async () => {
         jobId,
         serveUrl: join(projectRoot, "dist", "remotion"),
         outputLocation,
-        browserExecutable: join(projectRoot, "vendor", "chrome-headless-shell", "chrome-headless-shell"),
+        browserExecutable,
         binariesDirectory,
         overwriteExisting: false,
         project: makeProject({name: "Cancel-test", presetId: "h264-review", width: 1920, height: 1080, durationInFrames: 900}),
@@ -282,7 +295,7 @@ const run = async () => {
         jobId,
         serveUrl: join(projectRoot, "dist", "remotion"),
         outputLocation,
-        browserExecutable: join(projectRoot, "vendor", "chrome-headless-shell", "chrome-headless-shell"),
+        browserExecutable,
         binariesDirectory,
         overwriteExisting: false,
         project: makeProject(scenario),

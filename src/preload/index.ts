@@ -22,6 +22,7 @@ import type {
 } from "../shared/contracts";
 
 const api: MotionerApi = {
+  platform: process.platform === "win32" ? "win32" : "darwin",
   newProject: (): Promise<ProjectSession> => ipcRenderer.invoke("project:new"),
   getLastProject: (): Promise<ProjectSession | null> => ipcRenderer.invoke("project:last-session"),
   openProject: (): Promise<ProjectOperationResult> =>
@@ -78,7 +79,7 @@ const api: MotionerApi = {
     ipcRenderer.invoke("presets:export", collection),
   importParameterPresets: (): Promise<PresetImportResult> =>
     ipcRenderer.invoke("presets:import"),
-  revealInFinder: (path: string): Promise<boolean> =>
+  revealInFileManager: (path: string): Promise<boolean> =>
     ipcRenderer.invoke("path:reveal", path),
   onMenuCommand: (listener: (command: MenuCommand) => void): (() => void) => {
     const handler = (_event: Electron.IpcRendererEvent, command: MenuCommand) =>

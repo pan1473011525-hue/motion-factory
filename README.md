@@ -1,6 +1,6 @@
 # Motioner
 
-Motioner 是一款仅面向 Apple Silicon macOS 的本地透明动效生成器。既可以选择模板后填写文字、数据或素材，也可以从组件库自由搭建画面、安排图层时序和动效；最终生成可直接放入剪辑时间线的透明 ProRes 4444、ProRes 4444 XQ 或 PNG 序列，也可生成带深色底的 H.264 审看版。
+Motioner 是一款面向 Apple Silicon macOS 与 Windows x64 的本地透明动效生成器。既可以选择模板后填写文字、数据或素材，也可以从组件库自由搭建画面、安排图层时序和动效；最终生成可直接放入剪辑时间线的透明 ProRes 4444、ProRes 4444 XQ 或 PNG 序列，也可生成带深色底的 H.264 审看版。两端共用同一套 React 工作台和项目格式，仅窗口生命周期、快捷键、系统定位文案与离线渲染二进制按平台适配。
 
 当前版本：`1.3.1`。应用、Dock 与安装包已使用 Motioner 正式图标。
 
@@ -27,7 +27,7 @@ Motioner 是一款仅面向 Apple Silicon macOS 的本地透明动效生成器�
 - 输出重名可选自动版本号、安全替换或跳过；替换仅在新文件验证成功后执行。
 - 内置模板脚手架 `pnpm template:new -- --id=<id> --name=<名称>`，自动生成 Manifest/组件并注册。
 - 项目格式 v2 同时保存模板参数和 Composer 场景；v1 项目及恢复快照打开时自动迁移，不修改原有模板语义。
-- 每次成功导出附带 `.motioner.json` 报告，界面显示实际文件大小并可在 Finder 中定位。
+- 每次成功导出附带 `.motioner.json` 报告，界面显示实际文件大小并可在 Finder / 文件资源管理器中定位。
 - 打包内置 Headless Chrome、FFmpeg、FFprobe 和 Remotion bundle，首次运行不下载渲染依赖。
 
 ## 快速开始
@@ -50,7 +50,7 @@ pnpm test:cancel
 pnpm test:production
 ```
 
-构建本机目录包和 DMG：
+构建 macOS 目录包和 DMG：
 
 ```bash
 pnpm package:mac
@@ -58,13 +58,24 @@ pnpm verify:package
 pnpm package:dmg
 ```
 
+准备并构建 Windows x64 目录包或 NSIS 安装包：
+
+```bash
+pnpm prepare:win
+pnpm package:win:dir
+pnpm package:win
+```
+
 输出位置：
 
 - `release/mac-arm64/Motioner.app`
 - `release/Motioner-1.3.1-arm64.dmg`
 - `release/Motioner-integrity.json`
+- `release/win-unpacked/Motioner.exe`
+- `release/Motioner-1.3.1-x64-windows-installer.exe`
+- `release/Motioner-integrity-windows-x64.json`
 
-未签名构建仅供本机自用。公开分发前需要 Developer ID、Hardened Runtime 和 Notarization。
+未签名构建仅供测试和自用。公开分发前，macOS 需要 Developer ID、Hardened Runtime 和 Notarization；Windows 需要代码签名证书，否则可能触发 SmartScreen 安全提示。Windows 开发、打包和实机验收详见 [Windows 双端开发与打包](docs/WINDOWS_DEVELOPMENT.md)。
 
 ## 仓库结构
 

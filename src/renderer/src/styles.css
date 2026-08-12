@@ -21,7 +21,7 @@
   --radius-panel: 10px;
   --transition-state: 160ms cubic-bezier(0.22, 1, 0.36, 1);
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC",
-    sans-serif;
+    "Segoe UI", "Microsoft YaHei UI", "Microsoft YaHei", sans-serif;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
 }

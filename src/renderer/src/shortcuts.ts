@@ -22,6 +22,7 @@ export type ShortcutCommandId =
   | "nudge-down-large";
 
 export type ShortcutBindingMap = Record<ShortcutCommandId, string[]>;
+export type ShortcutPlatform = "darwin" | "win32";
 
 export const SHORTCUT_COMMANDS: ReadonlyArray<{id: ShortcutCommandId; label: string; group: "播放" | "时间线" | "编辑" | "项目" | "画布"; composerOnly?: boolean}> = [
   {id: "toggle-playback", label: "播放 / 暂停", group: "播放"},
@@ -47,20 +48,20 @@ export const SHORTCUT_COMMANDS: ReadonlyArray<{id: ShortcutCommandId; label: str
   {id: "nudge-down-large", label: "组件大步下移", group: "画布", composerOnly: true},
 ];
 
-export const DEFAULT_SHORTCUT_BINDINGS: ShortcutBindingMap = {
+export const getDefaultShortcutBindings = (platform: ShortcutPlatform): ShortcutBindingMap => ({
   "toggle-playback": ["Space"],
   "previous-frame": ["ArrowLeft"],
   "next-frame": ["ArrowRight"],
-  "timeline-start": ["Meta+ArrowLeft"],
-  "timeline-end": ["Meta+ArrowRight"],
+  "timeline-start": [`${platform === "win32" ? "Control" : "Meta"}+ArrowLeft`],
+  "timeline-end": [`${platform === "win32" ? "Control" : "Meta"}+ArrowRight`],
   "add-marker": ["M"],
   "add-segment": ["Shift+M"],
-  "duplicate-layer": ["Meta+D"],
+  "duplicate-layer": [`${platform === "win32" ? "Control" : "Meta"}+D`],
   "delete-layer": ["Delete", "Backspace"],
   "ripple-delete": ["Shift+Delete"],
-  "save-project": ["Meta+S"],
-  undo: ["Meta+Z"],
-  redo: ["Meta+Shift+Z"],
+  "save-project": [`${platform === "win32" ? "Control" : "Meta"}+S`],
+  undo: [`${platform === "win32" ? "Control" : "Meta"}+Z`],
+  redo: [`${platform === "win32" ? "Control" : "Meta"}+Shift+Z`],
   "nudge-left": ["Alt+ArrowLeft"],
   "nudge-right": ["Alt+ArrowRight"],
   "nudge-up": ["Alt+ArrowUp"],
@@ -69,7 +70,9 @@ export const DEFAULT_SHORTCUT_BINDINGS: ShortcutBindingMap = {
   "nudge-right-large": ["Alt+Shift+ArrowRight"],
   "nudge-up-large": ["Alt+Shift+ArrowUp"],
   "nudge-down-large": ["Alt+Shift+ArrowDown"],
-};
+});
+
+export const DEFAULT_SHORTCUT_BINDINGS: ShortcutBindingMap = getDefaultShortcutBindings("darwin");
 
 const keyFromCode = (code: string): string => code.startsWith("Key") ? code.slice(3) : code.startsWith("Digit") ? code.slice(5) : code;
 
@@ -96,13 +99,37 @@ export const shortcutConflicts = (bindings: ShortcutBindingMap, commandId: Short
 export const isEditableShortcutTarget = (target: EventTarget | null): boolean =>
   target instanceof HTMLElement && Boolean(target.closest("input, textarea, select, [contenteditable='true']"));
 
-export const mergeShortcutBindings = (value: unknown): ShortcutBindingMap => {
-  if (typeof value !== "object" || value === null) return structuredClone(DEFAULT_SHORTCUT_BINDINGS);
+export const mergeShortcutBindings = (
+  value: unknown,
+  defaults: ShortcutBindingMap = DEFAULT_SHORTCUT_BINDINGS,
+): ShortcutBindingMap => {
+  if (typeof value !== "object" || value === null) return structuredClone(defaults);
   const source = value as Partial<Record<ShortcutCommandId, unknown>>;
   return Object.fromEntries(SHORTCUT_COMMANDS.map((command) => {
     const stored = source[command.id];
-    return [command.id, Array.isArray(stored) && stored.every((item) => typeof item === "string") ? stored : DEFAULT_SHORTCUT_BINDINGS[command.id]];
+    return [command.id, Array.isArray(stored) && stored.every((item) => typeof item === "string") ? stored : defaults[command.id]];
   })) as ShortcutBindingMap;
 };
 
-export const formatShortcut = (chord: string): string => chord.replace("Meta", "⌘").replace("Control", "⌃").replace("Alt", "⌥").replace("Shift", "⇧").replaceAll("+", "").replace("ArrowLeft", "←").replace("ArrowRight", "→").replace("ArrowUp", "↑").replace("ArrowDown", "↓").replace("Space", "空格").replace("Backspace", "退格").replace("Delete", "删除");
+export const formatShortcut = (chord: string, platform: ShortcutPlatform = "darwin"): string => {
+  const keys = chord.split("+").map((key) => key
+    .replace("ArrowLeft", "←")
+    .replace("ArrowRight", "→")
+    .replace("ArrowUp", "↑")
+    .replace("ArrowDown", "↓")
+    .replace("Space", "空格")
+    .replace("Backspace", "退格")
+    .replace("Delete", "删除"));
+  if (platform === "win32") {
+    return keys.map((key) => key
+      .replace("Meta", "Win")
+      .replace("Control", "Ctrl"))
+      .join("+");
+  }
+  return keys.map((key) => key
+    .replace("Meta", "⌘")
+    .replace("Control", "⌃")
+    .replace("Alt", "⌥")
+    .replace("Shift", "⇧"))
+    .join("");
+};

@@ -1,14 +1,14 @@
 # Motioner 1.3.1 用户手册
 
-Motioner 是 Apple Silicon macOS 上的本地动效工具。它不需要网络、账号或云服务：既能选择模板后填写参数，也能从组件库自由编排图层；设定画布与时长后，即可把透明视频直接拖入剪辑软件。
+Motioner 是 Apple Silicon macOS 与 Windows x64 上的本地动效工具。它不需要网络、账号或云服务：既能选择模板后填写参数，也能从组件库自由编排图层；设定画布与时长后，即可把透明视频直接拖入剪辑软件。
 
 ## 1. 安装与首次启动
 
 1. 打开 `Motioner-1.3.1-arm64.dmg`，把 Motioner 拖入“应用程序”。
-2. 当前构建未做 Apple 公证，仅供本机自用。若 macOS 首次阻止启动，在 Finder 中右键 Motioner，选择“打开”，再确认一次。
+2. 当前构建未做 Apple 公证或 Windows 代码签名，仅供测试和自用。macOS 首次阻止启动时可在 Finder 中右键 Motioner 后选择“打开”；Windows 出现 SmartScreen 时应先核对安装包来源和 SHA-256，再决定是否运行。
 3. 应用内置 Headless Chrome、FFmpeg、FFprobe 与模板 bundle；首次导出不下载组件。
 
-建议环境：Apple Silicon、macOS 14 或更高、至少 16 GB 内存。4K ProRes 会产生较大的临时文件，导出前应保留充足空间。
+建议环境：Apple Silicon + macOS 14 或更高，或 Windows 10/11 x64；至少 16 GB 内存。4K ProRes 会产生较大的临时文件，导出前应保留充足空间。
 
 ## 2. 工作台
 
