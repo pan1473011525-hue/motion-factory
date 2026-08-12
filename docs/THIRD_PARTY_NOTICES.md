@@ -42,7 +42,7 @@ Electron 本身采用 MIT License，并包含 Chromium、Node.js 及其他各自
 
 ## 内置动效组件（video-shotcraft）
 
-Motioner 1.4 起内置来自 [Vincentwei1021/video-shotcraft](https://github.com/Vincentwei1021/video-shotcraft)（Apache License 2.0）的 12 个模板：8 个转场遮罩（百叶窗、时钟、光圈、墨染、撕裂、线性/径向/锥形渐变）与 4 个排版模板（终端打字机、打字机纠错、乱码解码、翻页板）。
+Motioner 1.4 起内置来自 [Vincentwei1021/video-shotcraft](https://github.com/Vincentwei1021/video-shotcraft)（Apache License 2.0）的组件：24 个模板（8 个转场遮罩、4 个花式排版、12 个数据/资料/字幕/效果模板）与 5 个自由编排组件（列表逐项、卡片堆叠、骨架屏、SVG描边、里程表数字）。
 
 所有内置组件均已完成参数化与坐标系适配（详见 `docs/TEMPLATE_INGESTION_PLAN.md`），每个组件文件头保留上游 Apache 版权声明。上游许可证文本：https://www.apache.org/licenses/LICENSE-2.0
 

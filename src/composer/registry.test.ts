@@ -9,8 +9,8 @@ import {
 
 describe("composer registry", () => {
   it("ships a unique base component and motion library", () => {
-    expect(composerComponents).toHaveLength(15);
-    expect(new Set(composerComponents.map((component) => component.id)).size).toBe(15);
+    expect(composerComponents).toHaveLength(20);
+    expect(new Set(composerComponents.map((component) => component.id)).size).toBe(20);
     expect(motionPresets).toHaveLength(16);
     expect(new Set(motionPresets.map((preset) => preset.id)).size).toBe(16);
   });

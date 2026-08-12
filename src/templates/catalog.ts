@@ -38,6 +38,18 @@ import {typewriterTerminalManifest} from "./typewriter-terminal/manifest";
 import {typewriterRetypeManifest} from "./typewriter-retype/manifest";
 import {textScrambleManifest} from "./text-scramble/manifest";
 import {splitFlapManifest} from "./split-flap/manifest";
+import {gaugeReadoutManifest} from "./gauge-readout/manifest";
+import {odometerRollManifest} from "./odometer-roll/manifest";
+import {confettiCelebrateManifest} from "./confetti-celebrate/manifest";
+import {voiceWaveformManifest} from "./voice-waveform/manifest";
+import {listRevealManifest} from "./list-reveal/manifest";
+import {cardStackManifest} from "./card-stack/manifest";
+import {skeletonRevealManifest} from "./skeleton-reveal/manifest";
+import {svgTraceManifest} from "./svg-trace/manifest";
+import {karaokeFillManifest} from "./karaoke-fill/manifest";
+import {grainDissolveManifest} from "./grain-dissolve/manifest";
+import {scanlineAnnotateManifest} from "./scanline-annotate/manifest";
+import {glowFlylineManifest} from "./glow-flyline/manifest";
 // motioner-scaffold:manifest-imports
 
 export type AnyTemplateManifest = TemplateManifest<Record<string, unknown>>;
@@ -81,6 +93,18 @@ export const templateCatalog: ReadonlyArray<AnyTemplateManifest> = [
   eraseManifestType(typewriterRetypeManifest),
   eraseManifestType(textScrambleManifest),
   eraseManifestType(splitFlapManifest),
+  eraseManifestType(gaugeReadoutManifest),
+  eraseManifestType(odometerRollManifest),
+  eraseManifestType(confettiCelebrateManifest),
+  eraseManifestType(voiceWaveformManifest),
+  eraseManifestType(listRevealManifest),
+  eraseManifestType(cardStackManifest),
+  eraseManifestType(skeletonRevealManifest),
+  eraseManifestType(svgTraceManifest),
+  eraseManifestType(karaokeFillManifest),
+  eraseManifestType(grainDissolveManifest),
+  eraseManifestType(scanlineAnnotateManifest),
+  eraseManifestType(glowFlylineManifest),
   // motioner-scaffold:catalog-items
 ];
 

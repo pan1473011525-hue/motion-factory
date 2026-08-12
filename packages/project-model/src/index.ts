@@ -82,6 +82,11 @@ export const composerComponentIdSchema = z.enum([
   "callout",
   "lower-third",
   "bar-chart",
+  "list-reveal",
+  "card-stack",
+  "skeleton-reveal",
+  "svg-trace",
+  "odometer-roll",
   "template",
 ]);
 

@@ -38,6 +38,18 @@ import {TypewriterTerminal} from "../remotion/generated/typewriter-terminal";
 import {TypewriterRetype} from "../remotion/generated/typewriter-retype";
 import {TextScramble} from "../remotion/generated/text-scramble";
 import {SplitFlap} from "../remotion/generated/split-flap";
+import {GaugeReadout} from "../remotion/generated/gauge-readout";
+import {OdometerRoll} from "../remotion/generated/odometer-roll";
+import {ConfettiCelebrate} from "../remotion/generated/confetti-celebrate";
+import {VoiceWaveform} from "../remotion/generated/voice-waveform";
+import {ListReveal} from "../remotion/generated/list-reveal";
+import {CardStack} from "../remotion/generated/card-stack";
+import {SkeletonReveal} from "../remotion/generated/skeleton-reveal";
+import {SvgTrace} from "../remotion/generated/svg-trace";
+import {KaraokeFill} from "../remotion/generated/karaoke-fill";
+import {GrainDissolve} from "../remotion/generated/grain-dissolve";
+import {ScanlineAnnotate} from "../remotion/generated/scanline-annotate";
+import {GlowFlyline} from "../remotion/generated/glow-flyline";
 // motioner-scaffold:component-imports
 import {alphaTestCardManifest} from "./alpha-test-card/manifest";
 import {beforeAfterManifest} from "./before-after/manifest";
@@ -73,6 +85,18 @@ import {typewriterTerminalManifest} from "./typewriter-terminal/manifest";
 import {typewriterRetypeManifest} from "./typewriter-retype/manifest";
 import {textScrambleManifest} from "./text-scramble/manifest";
 import {splitFlapManifest} from "./split-flap/manifest";
+import {gaugeReadoutManifest} from "./gauge-readout/manifest";
+import {odometerRollManifest} from "./odometer-roll/manifest";
+import {confettiCelebrateManifest} from "./confetti-celebrate/manifest";
+import {voiceWaveformManifest} from "./voice-waveform/manifest";
+import {listRevealManifest} from "./list-reveal/manifest";
+import {cardStackManifest} from "./card-stack/manifest";
+import {skeletonRevealManifest} from "./skeleton-reveal/manifest";
+import {svgTraceManifest} from "./svg-trace/manifest";
+import {karaokeFillManifest} from "./karaoke-fill/manifest";
+import {grainDissolveManifest} from "./grain-dissolve/manifest";
+import {scanlineAnnotateManifest} from "./scanline-annotate/manifest";
+import {glowFlylineManifest} from "./glow-flyline/manifest";
 // motioner-scaffold:manifest-imports
 
 export type RuntimeDefinition = TemplateDefinition<
@@ -119,6 +143,18 @@ export const runtimeTemplates: ReadonlyArray<RuntimeDefinition> = [
   eraseDefinitionType(defineTemplate({...typewriterRetypeManifest, component: TypewriterRetype})),
   eraseDefinitionType(defineTemplate({...textScrambleManifest, component: TextScramble})),
   eraseDefinitionType(defineTemplate({...splitFlapManifest, component: SplitFlap})),
+  eraseDefinitionType(defineTemplate({...gaugeReadoutManifest, component: GaugeReadout})),
+  eraseDefinitionType(defineTemplate({...odometerRollManifest, component: OdometerRoll})),
+  eraseDefinitionType(defineTemplate({...confettiCelebrateManifest, component: ConfettiCelebrate})),
+  eraseDefinitionType(defineTemplate({...voiceWaveformManifest, component: VoiceWaveform})),
+  eraseDefinitionType(defineTemplate({...listRevealManifest, component: ListReveal})),
+  eraseDefinitionType(defineTemplate({...cardStackManifest, component: CardStack})),
+  eraseDefinitionType(defineTemplate({...skeletonRevealManifest, component: SkeletonReveal})),
+  eraseDefinitionType(defineTemplate({...svgTraceManifest, component: SvgTrace})),
+  eraseDefinitionType(defineTemplate({...karaokeFillManifest, component: KaraokeFill})),
+  eraseDefinitionType(defineTemplate({...grainDissolveManifest, component: GrainDissolve})),
+  eraseDefinitionType(defineTemplate({...scanlineAnnotateManifest, component: ScanlineAnnotate})),
+  eraseDefinitionType(defineTemplate({...glowFlylineManifest, component: GlowFlyline})),
   // motioner-scaffold:runtime-items
 ];
 
