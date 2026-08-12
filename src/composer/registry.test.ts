@@ -21,6 +21,9 @@ describe("composer registry", () => {
     expect(node.transform.y + node.transform.height / 2).toBeCloseTo(0.5);
     expect(node.timing).toEqual({from: 0, durationInFrames: 150});
     expect(node.transform.zIndex).toBe(3);
+    expect(node.motion.enterEasing).toBe("smooth-out");
+    expect(node.motion.contentEasing).toBe("smooth-in-out");
+    expect(node.motion.exitEasing).toBe("smooth-in");
   });
 
   it("validates node timing and component props", () => {

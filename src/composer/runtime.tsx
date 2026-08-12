@@ -1,10 +1,8 @@
 import type {CSSProperties, ReactNode} from "react";
 import {
   AbsoluteFill,
-  Easing,
   Sequence,
   interpolate,
-  spring,
   useCurrentFrame,
   useVideoConfig,
 } from "remotion";
@@ -14,6 +12,7 @@ import type {
   ComposerNode,
 } from "../../packages/project-model/src";
 import {getComposerComponent} from "./registry";
+import {getComposerEasingFunction} from "./easing";
 import {getRuntimeTemplate} from "../templates/definitions";
 import {
   MediaSlot,
@@ -28,6 +27,9 @@ const asBoolean = (value: unknown, fallback = false): boolean => typeof value ==
 const motionSupportsLoop = (preset: ComposerMotionPresetId): boolean =>
   preset === "float" || preset === "pulse" || preset === "drift" || preset === "rotate" || preset === "breathe";
 
+const perceptualScale = (from: number, progress: number): number =>
+  Math.sqrt(Math.max(0, from ** 2 + (1 - from ** 2) * progress));
+
 const getRevealStyle = (
   preset: ComposerMotionPresetId,
   progress: number,
@@ -40,8 +42,8 @@ const getRevealStyle = (
   if (preset === "drop") return {x: 0, y: -(1 - progress) * distance, scale: 1, opacity: progress, blur: 0};
   if (preset === "slide-left") return {x: -(1 - progress) * distance * 1.5, y: 0, scale: 1, opacity: progress, blur: 0};
   if (preset === "slide-right") return {x: (1 - progress) * distance * 1.5, y: 0, scale: 1, opacity: progress, blur: 0};
-  if (preset === "scale") return {x: 0, y: 0, scale: 0.62 + progress * 0.38, opacity: progress, blur: 0};
-  if (preset === "pop") return {x: 0, y: 0, scale: 0.72 + progress * 0.28, opacity: Math.min(1, progress * 1.5), blur: 0};
+  if (preset === "scale") return {x: 0, y: 0, scale: perceptualScale(0.62, progress), opacity: progress, blur: 0};
+  if (preset === "pop") return {x: 0, y: 0, scale: perceptualScale(0.72, progress), opacity: Math.min(1, progress * 1.5), blur: 0};
   if (preset === "wipe-left") return {x: 0, y: 0, scale: 1, opacity: 1, blur: 0, clipPath: `inset(0 ${(1 - progress) * 100}% 0 0)`};
   if (preset === "wipe-right") return {x: 0, y: 0, scale: 1, opacity: 1, blur: 0, clipPath: `inset(0 0 0 ${(1 - progress) * 100}%)`};
   if (preset === "blur") return {x: 0, y: 0, scale: 1, opacity: progress, blur: (1 - progress) * 24 * intensity * unit};
@@ -59,12 +61,8 @@ export const getComposerMotionStyle = (
   const duration = node.timing.durationInFrames;
   const enterFrames = Math.max(1, Math.round(node.motion.enterDuration / speed));
   const exitFrames = Math.max(1, Math.round(node.motion.exitDuration / speed));
-  const ease = Easing.bezier(0.16, 1, 0.3, 1);
-  const rawEnter = interpolate(frame, [0, enterFrames], [0, 1], {extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: ease});
-  const enterProgress = node.motion.enter === "pop" && !reducedMotion
-    ? Math.min(1.08, spring({frame, fps, durationInFrames: enterFrames, config: {damping: 13, stiffness: 170, mass: 0.8}}))
-    : rawEnter;
-  const exitProgress = interpolate(frame, [Math.max(0, duration - exitFrames), Math.max(1, duration - 1)], [1, 0], {extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: ease});
+  const enterProgress = interpolate(frame, [0, enterFrames], [0, 1], {extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: getComposerEasingFunction(node.motion.enterEasing)});
+  const exitProgress = interpolate(frame, [Math.max(0, duration - exitFrames), Math.max(1, duration - 1)], [1, 0], {extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: getComposerEasingFunction(node.motion.exitEasing)});
   const enterPreset = reducedMotion && node.motion.enter !== "none" ? "fade" : node.motion.enter;
   const exitPreset = reducedMotion && node.motion.exit !== "none" ? "fade" : node.motion.exit;
   // mix 权重:各通道效果按 0..1 权重插值(1 还原原行为,0 关闭该通道)。
@@ -103,6 +101,7 @@ const ComponentContent: React.FC<{node: ComposerNode; unit: number}> = ({node, u
   const fontFamily = useProjectFontFamily();
   const motion = useMotionSettings();
   const props = getComposerComponent(node.componentId).schema.parse(node.props);
+  const contentEasing = getComposerEasingFunction(node.motion.contentEasing);
   const full: CSSProperties = {width: "100%", height: "100%"};
   const alignItems = asString(props.align, "left") === "center" ? "center" : asString(props.align, "left") === "right" ? "flex-end" : "flex-start";
 
@@ -112,7 +111,7 @@ const ComponentContent: React.FC<{node: ComposerNode; unit: number}> = ({node, u
 
   if (node.componentId === "stat-number") {
     const duration = Math.max(1, Math.round(0.8 * fps / motion.speed));
-    const progress = motion.reducedMotion ? 1 : interpolate(frame, [0, duration], [0, 1], {extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.bezier(0.16, 1, 0.3, 1)});
+    const progress = motion.reducedMotion ? 1 : interpolate(frame, [0, duration], [0, 1], {extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: contentEasing});
     const value = asNumber(props.value) * progress;
     return <div style={{...full, display: "flex", flexDirection: "column", justifyContent: "center", color: asString(props.color, "#47A7FF"), fontFamily}}><div style={{fontSize: 116 * unit, lineHeight: 0.92, fontWeight: 760, fontVariantNumeric: "tabular-nums"}}>{asString(props.prefix)}{value.toFixed(asNumber(props.decimals, 0))}{asString(props.suffix)}</div><div style={{marginTop: 18 * unit, color: "rgba(244,247,251,0.72)", fontSize: 28 * unit, fontWeight: 520}}>{asString(props.label)}</div></div>;
   }
@@ -133,7 +132,7 @@ const ComponentContent: React.FC<{node: ComposerNode; unit: number}> = ({node, u
 
   if (node.componentId === "progress") {
     const value = Math.min(100, Math.max(0, asNumber(props.value)));
-    const progress = motion.reducedMotion ? 1 : interpolate(frame, [0, Math.max(1, fps)], [0, 1], {extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.bezier(0.16, 1, 0.3, 1)});
+    const progress = motion.reducedMotion ? 1 : interpolate(frame, [0, Math.max(1, fps)], [0, 1], {extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: contentEasing});
     return <div style={{...full, display: "flex", flexDirection: "column", justifyContent: "center", color: "#F4F7FB", fontFamily}}><div style={{display: "flex", justifyContent: "space-between", alignItems: "baseline", fontSize: 28 * unit, fontWeight: 620}}><span>{asString(props.label)}</span>{asBoolean(props.showValue, true) && <strong style={{fontVariantNumeric: "tabular-nums"}}>{Math.round(value * progress)}%</strong>}</div><div style={{height: 18 * unit, marginTop: 18 * unit, borderRadius: 999, background: asString(props.trackColor), overflow: "hidden"}}><div style={{width: `${value * progress}%`, height: "100%", borderRadius: 999, background: asString(props.accentColor)}} /></div></div>;
   }
 
@@ -144,7 +143,7 @@ const ComponentContent: React.FC<{node: ComposerNode; unit: number}> = ({node, u
     const labels = asString(props.labels).split(",").map((value) => value.trim()).filter(Boolean).slice(0, 12);
     const values = asString(props.values).split(",").map(Number).map((value) => Number.isFinite(value) ? value : 0).slice(0, labels.length);
     const maximum = Math.max(1, ...values);
-    const progress = motion.reducedMotion ? 1 : interpolate(frame, [0, Math.max(1, Math.round(fps * 1.1))], [0, 1], {extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.bezier(0.16, 1, 0.3, 1)});
+    const progress = motion.reducedMotion ? 1 : interpolate(frame, [0, Math.max(1, Math.round(fps * 1.1))], [0, 1], {extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: contentEasing});
     return <div style={{...full, display: "flex", flexDirection: "column", color: asString(props.textColor), fontFamily}}><strong style={{fontSize: 32 * unit}}>{asString(props.title)}</strong><div style={{display: "flex", flex: 1, alignItems: "flex-end", gap: 18 * unit, paddingTop: 24 * unit}}>{labels.map((label, index) => {const value = values[index] ?? 0; return <div key={`${label}-${index}`} style={{display: "flex", flex: 1, minWidth: 0, height: "100%", flexDirection: "column", justifyContent: "flex-end", alignItems: "center"}}>{asBoolean(props.showValues, true) && <span style={{fontSize: 20 * unit, fontVariantNumeric: "tabular-nums"}}>{value}</span>}<div style={{width: "70%", height: `${Math.max(2, value / maximum * progress * 80)}%`, marginTop: 8 * unit, borderRadius: `${9 * unit}px ${9 * unit}px 0 0`, background: asString(props.accentColor)}} /><span style={{width: "100%", marginTop: 10 * unit, overflow: "hidden", textAlign: "center", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "rgba(244,247,251,0.68)", fontSize: 18 * unit}}>{label}</span></div>;})}</div></div>;
   }
 

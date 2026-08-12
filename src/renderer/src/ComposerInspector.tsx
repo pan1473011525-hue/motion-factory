@@ -1,12 +1,14 @@
 import {useState} from "react";
 import type {
+  ComposerEasingPresetId,
   ComposerMotionPresetId,
   ComposerNode,
   ProjectAsset,
 } from "../../../packages/project-model/src";
 import type {InspectorField, InspectorSection} from "../../../packages/template-sdk/src";
 import {Eye, EyeOff, Lock, LockOpen, RotateCcw, X} from "lucide-react";
-import {getComposerComponent, motionPresets} from "../../composer/registry";
+import {composerEasingPresets, getComposerEasingFunction, getComposerEasingPreset} from "../../composer/easing";
+import {composerComponentSupportsContentEasing, getComposerComponent, motionPresets} from "../../composer/registry";
 import {FieldControl} from "./Inspector";
 import {InspectorGroup} from "./InspectorGroup";
 import {CompactPairControl, CompactPropertyRow, RangeNumberControl} from "./PropertyControls";
@@ -33,6 +35,35 @@ const MotionSelect: React.FC<{
   onChange: (value: ComposerMotionPresetId) => void;
 }> = ({label, phase, value, onChange}) => <label className="field"><span>{label}</span><Select ariaLabel={label} value={value} options={motionPresets.filter((preset) => preset.phases.includes(phase)).map((preset) => ({value: preset.id, label: preset.name}))} onChange={(nextValue) => onChange(nextValue as ComposerMotionPresetId)} /></label>;
 
+const curvePath = (presetId: ComposerEasingPresetId): string => {
+  const easing = getComposerEasingFunction(presetId);
+  return Array.from({length: 41}, (_, index) => {
+    const progress = index / 40;
+    const value = clamp(easing(progress), -0.15, 1.15);
+    const x = 5 + progress * 102;
+    const y = 37 - (value + 0.15) / 1.3 * 32;
+    return `${index === 0 ? "M" : "L"}${x.toFixed(2)} ${y.toFixed(2)}`;
+  }).join(" ");
+};
+
+const EasingCurveControl: React.FC<{
+  label: string;
+  value: ComposerEasingPresetId;
+  onChange: (value: ComposerEasingPresetId) => void;
+}> = ({label, value, onChange}) => {
+  const preset = getComposerEasingPreset(value);
+  return <div className="easing-curve-control">
+    <label><span>{label}</span><Select ariaLabel={label} value={value} options={composerEasingPresets.map((candidate) => ({value: candidate.id, label: candidate.name}))} onChange={(nextValue) => onChange(nextValue as ComposerEasingPresetId)} /></label>
+    <div className="easing-curve-summary" title={preset.description}>
+      <svg viewBox="0 0 112 42" role="img" aria-label={`${preset.name}曲线预览`}>
+        <path className="easing-curve-guide" d="M5 33.31 H107 M5 8.69 H107" />
+        <path className="easing-curve-line" d={curvePath(value)} />
+      </svg>
+      <small>{preset.description}</small>
+    </div>
+  </div>;
+};
+
 export const ComposerInspector: React.FC<{
   node: ComposerNode | null;
   assets: ProjectAsset[];
@@ -51,6 +82,7 @@ export const ComposerInspector: React.FC<{
   const updateMotion = (patch: Partial<ComposerNode["motion"]>): void => onChange({...node, motion: {...node.motion, ...patch}});
   const updateProp = (key: string, value: unknown): void => onChange({...node, props: {...node.props, [key]: value}});
   const mix = node.motion.mix ?? {enter: 1, exit: 1, loop: 1};
+  const supportsContentEasing = composerComponentSupportsContentEasing(node.componentId);
 
   return <>{tabs}{view === "basic" ? <>
     <InspectorGroup title="图层" defaultOpen className="node-identity-editor">
@@ -76,12 +108,14 @@ export const ComposerInspector: React.FC<{
   </> : <>
     <InspectorGroup title="整体动效" defaultOpen className="node-motion-editor">
       <CompactPropertyRow label="整体强度"><RangeNumberControl ariaLabel="整体强度" value={node.motion.intensity} min={0} max={2} step={0.05} resetValue={1} onChange={(intensity) => updateMotion({intensity})} /></CompactPropertyRow>
+      {supportsContentEasing && <EasingCurveControl label="内容曲线" value={node.motion.contentEasing} onChange={(contentEasing) => updateMotion({contentEasing})} />}
     </InspectorGroup>
     <InspectorGroup title="入场动效" defaultOpen className="node-motion-editor phase-motion-editor">
-      <MotionSelect label="动效" phase="enter" value={node.motion.enter} onChange={(enter) => updateMotion({enter})} />
+      <MotionSelect label="动效" phase="enter" value={node.motion.enter} onChange={(enter) => updateMotion({enter, ...(enter === "pop" && !node.motion.enterEasing.startsWith("spring-") ? {enterEasing: "spring-snappy"} : {})})} />
+      <EasingCurveControl label="入场曲线" value={node.motion.enterEasing} onChange={(enterEasing) => updateMotion({enterEasing})} />
       <CompactPropertyRow label="入场帧数"><RangeNumberControl ariaLabel="入场帧数" value={node.motion.enterDuration} min={1} max={Math.max(1, node.timing.durationInFrames)} resetValue={15} onChange={(enterDuration) => updateMotion({enterDuration})} /></CompactPropertyRow>
       <CompactPropertyRow label="入场强度"><RangeNumberControl ariaLabel="入场强度" value={Math.round(mix.enter * 100)} min={0} max={100} resetValue={100} onChange={(enter) => updateMotion({mix: {...mix, enter: enter / 100}})} /></CompactPropertyRow>
-      <div className="phase-motion-actions"><button type="button" className="motion-reset-action" onClick={() => updateMotion({enter: "fade", enterDuration: 15, mix: {...mix, enter: 1}})} title="重置入场动效" aria-label="重置入场动效"><RotateCcw />重置</button><button type="button" className="motion-clear-action" onClick={() => updateMotion({enter: "none"})} title="清除入场动效" aria-label="清除入场动效"><X />清除</button></div>
+      <div className="phase-motion-actions"><button type="button" className="motion-reset-action" onClick={() => updateMotion({enter: "fade", enterDuration: 15, enterEasing: "smooth-out", mix: {...mix, enter: 1}})} title="重置入场动效" aria-label="重置入场动效"><RotateCcw />重置</button><button type="button" className="motion-clear-action" onClick={() => updateMotion({enter: "none"})} title="清除入场动效" aria-label="清除入场动效"><X />清除</button></div>
     </InspectorGroup>
     <InspectorGroup title="持续动效" defaultOpen className="node-motion-editor phase-motion-editor">
       <MotionSelect label="动效" phase="loop" value={node.motion.loop} onChange={(loop) => updateMotion({loop})} />
@@ -89,10 +123,11 @@ export const ComposerInspector: React.FC<{
       <div className="phase-motion-actions"><button type="button" className="motion-reset-action" onClick={() => updateMotion({loop: "none", mix: {...mix, loop: 1}})} title="重置持续动效" aria-label="重置持续动效"><RotateCcw />重置</button><button type="button" className="motion-clear-action" onClick={() => updateMotion({loop: "none"})} title="清除持续动效" aria-label="清除持续动效"><X />清除</button></div>
     </InspectorGroup>
     <InspectorGroup title="退场动效" defaultOpen className="node-motion-editor phase-motion-editor">
-      <MotionSelect label="动效" phase="exit" value={node.motion.exit} onChange={(exit) => updateMotion({exit})} />
+      <MotionSelect label="动效" phase="exit" value={node.motion.exit} onChange={(exit) => updateMotion({exit, ...(exit === "pop" && !node.motion.exitEasing.startsWith("spring-") ? {exitEasing: "spring-smooth"} : {})})} />
+      <EasingCurveControl label="退场曲线" value={node.motion.exitEasing} onChange={(exitEasing) => updateMotion({exitEasing})} />
       <CompactPropertyRow label="退场帧数"><RangeNumberControl ariaLabel="退场帧数" value={node.motion.exitDuration} min={1} max={Math.max(1, node.timing.durationInFrames)} resetValue={15} onChange={(exitDuration) => updateMotion({exitDuration})} /></CompactPropertyRow>
       <CompactPropertyRow label="退场强度"><RangeNumberControl ariaLabel="退场强度" value={Math.round(mix.exit * 100)} min={0} max={100} resetValue={100} onChange={(exit) => updateMotion({mix: {...mix, exit: exit / 100}})} /></CompactPropertyRow>
-      <div className="phase-motion-actions"><button type="button" className="motion-reset-action" onClick={() => updateMotion({exit: "fade", exitDuration: 15, mix: {...mix, exit: 1}})} title="重置退场动效" aria-label="重置退场动效"><RotateCcw />重置</button><button type="button" className="motion-clear-action" onClick={() => updateMotion({exit: "none"})} title="清除退场动效" aria-label="清除退场动效"><X />清除</button></div>
+      <div className="phase-motion-actions"><button type="button" className="motion-reset-action" onClick={() => updateMotion({exit: "fade", exitDuration: 15, exitEasing: "smooth-in", mix: {...mix, exit: 1}})} title="重置退场动效" aria-label="重置退场动效"><RotateCcw />重置</button><button type="button" className="motion-clear-action" onClick={() => updateMotion({exit: "none"})} title="清除退场动效" aria-label="清除退场动效"><X />清除</button></div>
     </InspectorGroup>
   </>}</>;
 };

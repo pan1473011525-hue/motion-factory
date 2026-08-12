@@ -104,6 +104,20 @@ export const composerMotionPresetIdSchema = z.enum([
   "breathe",
 ]);
 
+export const composerEasingPresetIdSchema = z.enum([
+  "linear",
+  "smooth-in",
+  "smooth-out",
+  "smooth-in-out",
+  "quad-in",
+  "quad-out",
+  "quad-in-out",
+  "expo-out",
+  "back-out",
+  "spring-smooth",
+  "spring-snappy",
+]);
+
 export const composerNodeTransformSchema = z.object({
   x: z.number().min(-2).max(3),
   y: z.number().min(-2).max(3),
@@ -121,11 +135,25 @@ export const composerNodeTimingSchema = z.object({
   durationInFrames: z.number().int().positive().max(216_000),
 });
 
-export const composerNodeMotionSchema = z.object({
+export const composerNodeMotionSchema = z.preprocess((value) => {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return value;
+  const motion = value as Record<string, unknown>;
+  return {
+    ...motion,
+    // Existing v2 projects used the expo-out Bezier for every tween and a spring for pop.
+    // Fill those values during parsing so opening an older project does not change its motion.
+    enterEasing: motion.enterEasing ?? (motion.enter === "pop" ? "spring-snappy" : "expo-out"),
+    contentEasing: motion.contentEasing ?? "expo-out",
+    exitEasing: motion.exitEasing ?? "expo-out",
+  };
+}, z.object({
   enter: composerMotionPresetIdSchema,
   enterDuration: z.number().int().min(1).max(3_600),
+  enterEasing: composerEasingPresetIdSchema,
+  contentEasing: composerEasingPresetIdSchema,
   exit: composerMotionPresetIdSchema,
   exitDuration: z.number().int().min(1).max(3_600),
+  exitEasing: composerEasingPresetIdSchema,
   loop: composerMotionPresetIdSchema,
   intensity: z.number().min(0).max(2),
   // mix:入场/退场/持续三通道的强度权重(0..1),可叠加时按权重混合,默认全量。
@@ -134,7 +162,7 @@ export const composerNodeMotionSchema = z.object({
     exit: z.number().min(0).max(1),
     loop: z.number().min(0).max(1),
   }).default({enter: 1, exit: 1, loop: 1}),
-});
+}));
 
 export const composerNodeSchema = z.object({
   id: z.string().min(1).max(128),
@@ -229,6 +257,7 @@ export type TimeSlot = z.infer<typeof timeSlotSchema>;
 export type Segment = z.infer<typeof segmentSchema>;
 export type ComposerComponentId = z.infer<typeof composerComponentIdSchema>;
 export type ComposerMotionPresetId = z.infer<typeof composerMotionPresetIdSchema>;
+export type ComposerEasingPresetId = z.infer<typeof composerEasingPresetIdSchema>;
 export type ComposerNodeTransform = z.infer<typeof composerNodeTransformSchema>;
 export type ComposerNodeTiming = z.infer<typeof composerNodeTimingSchema>;
 export type ComposerNodeMotion = z.infer<typeof composerNodeMotionSchema>;

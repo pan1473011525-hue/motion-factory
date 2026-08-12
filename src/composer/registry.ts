@@ -242,6 +242,15 @@ export const motionPresets: ReadonlyArray<MotionPresetDefinition> = [
   {id: "breathe", name: "呼吸明暗", description: "以透明度轻微呼吸。", phases: ["loop"]},
 ];
 
+const componentsWithContentAnimation = new Set<ComposerComponentId>([
+  "stat-number",
+  "progress",
+  "bar-chart",
+]);
+
+export const composerComponentSupportsContentEasing = (id: ComposerComponentId): boolean =>
+  componentsWithContentAnimation.has(id);
+
 export const getComposerComponent = (id: ComposerComponentId): ComposerComponentDefinition => {
   const component = composerComponents.find((candidate) => candidate.id === id);
   if (!component) throw new Error(`未安装组件：${id}`);
@@ -273,7 +282,18 @@ export const createComposerNode = (
       zIndex,
     },
     timing: {from: 0, durationInFrames: Math.max(1, durationInFrames)},
-    motion: {enter: "fade", enterDuration: 15, exit: "fade", exitDuration: 15, loop: "none", intensity: 1, mix: {enter: 1, exit: 1, loop: 1}},
+    motion: {
+      enter: "fade",
+      enterDuration: 15,
+      enterEasing: "smooth-out",
+      contentEasing: "smooth-in-out",
+      exit: "fade",
+      exitDuration: 15,
+      exitEasing: "smooth-in",
+      loop: "none",
+      intensity: 1,
+      mix: {enter: 1, exit: 1, loop: 1},
+    },
     props: structuredClone(definition.defaultProps),
     hidden: false,
     locked: false,

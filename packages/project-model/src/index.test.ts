@@ -80,6 +80,31 @@ describe("motion project model", () => {
     });
   });
 
+  it("adds backwards-compatible easing presets to existing composer nodes", () => {
+    const json = JSON.parse(serializeMotionProject(createFixture())) as Record<string, unknown>;
+    json.editorMode = "composer";
+    json.composition = {
+      backgroundColor: "transparent",
+      snapToGrid: true,
+      gridSize: 0.025,
+      nodes: [{
+        id: "legacy-node",
+        name: "旧弹出图层",
+        componentId: "rectangle",
+        transform: {x: 0.1, y: 0.1, width: 0.4, height: 0.3, rotation: 0, anchorX: 0.5, anchorY: 0.5, opacity: 1, zIndex: 0},
+        timing: {from: 0, durationInFrames: 90},
+        motion: {enter: "pop", enterDuration: 15, exit: "fade", exitDuration: 15, loop: "none", intensity: 1, mix: {enter: 1, exit: 1, loop: 1}},
+        props: {fill: "#242B35", borderColor: "#667181", borderWidth: 0, radius: 24},
+        hidden: false,
+        locked: false,
+      }],
+    };
+    const motion = parseMotionProjectJson(JSON.stringify(json)).composition.nodes[0].motion;
+    expect(motion.enterEasing).toBe("spring-snappy");
+    expect(motion.contentEasing).toBe("expo-out");
+    expect(motion.exitEasing).toBe("expo-out");
+  });
+
   it("persists a semi-transparent custom template surface", () => {
     const project = createFixture();
     project.templateAppearance = {surfaceColor: "#F2F3F5", surfaceOpacity: 0.5, surfaceTone: "auto"};

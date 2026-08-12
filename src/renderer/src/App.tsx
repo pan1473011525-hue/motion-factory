@@ -70,6 +70,7 @@ import {TemplateLibrary} from "./TemplateLibrary";
 import {ComponentLibrary} from "./ComponentLibrary";
 import {ComposerCanvasOverlay} from "./ComposerCanvasOverlay";
 import {ComposerInspector, type ComposerInspectorView} from "./ComposerInspector";
+import {shouldPreserveComposerSelection} from "./composer-selection";
 import {ComposerTimeline} from "./ComposerTimeline";
 import {OutputQuickSettings} from "./OutputQuickSettings";
 import {ResolutionSettings} from "./ResolutionSettings";
@@ -632,8 +633,13 @@ export const App: React.FC = () => {
   const applyMotionPresetToNode = (nodeId: string, presetId: ComposerMotionPresetId, phase: "enter" | "exit" | "loop"): void => {
     const node = project.composition.nodes.find((candidate) => candidate.id === nodeId);
     if (!node) return;
+    const easingPatch = presetId === "pop" && phase === "enter"
+      ? {enterEasing: "spring-snappy" as const}
+      : presetId === "pop" && phase === "exit"
+        ? {exitEasing: "spring-smooth" as const}
+        : {};
     selectNodeOnly(node.id);
-    commitComposition({...project.composition, nodes: project.composition.nodes.map((candidate) => candidate.id === node.id ? {...node, motion: {...node.motion, [phase]: presetId}} : candidate)});
+    commitComposition({...project.composition, nodes: project.composition.nodes.map((candidate) => candidate.id === node.id ? {...node, motion: {...node.motion, [phase]: presetId, ...easingPatch}} : candidate)});
     const previewFrame = phase === "exit"
       ? Math.max(node.timing.from, node.timing.from + node.timing.durationInFrames - node.motion.exitDuration - 1)
       : phase === "loop"
@@ -753,8 +759,7 @@ export const App: React.FC = () => {
     const handleClick = (event: MouseEvent): void => {
       const target = event.target as HTMLElement | null;
       if (!target) return;
-      const keepSelection = event.composedPath().some((candidate) => candidate instanceof Element && candidate.matches(".composer-canvas-overlay, .composer-timeline, .component-library, .inspector-panel"));
-      if (keepSelection) return;
+      if (shouldPreserveComposerSelection(event.composedPath())) return;
       setSelectedNodeId(null);
       setMultiSelectedIds([]);
     };

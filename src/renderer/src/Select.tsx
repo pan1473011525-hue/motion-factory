@@ -158,6 +158,7 @@ export const Select: React.FC<{
       ref={menuRef}
       id={listboxId}
       className="select-menu"
+      data-preserve-composer-selection
       role="listbox"
       aria-label={ariaLabel}
       style={{top: position.top, left: position.left, width: position.width, maxHeight: position.maxHeight}}

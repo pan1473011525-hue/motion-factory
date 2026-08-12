@@ -102,7 +102,7 @@ const buildNodeLayer = (
   };
 
   const props = (node.props ?? {}) as Record<string, unknown>;
-  const transform = buildTransform(node, positionX, positionY, anchorX, anchorY);
+  const transform = buildTransform(node, positionX, positionY, anchorX, anchorY, warnings);
 
   let layer: LottieLayer | null = null;
 
@@ -175,6 +175,7 @@ const buildTransform = (
   positionY: number,
   anchorX: number,
   anchorY: number,
+  warnings: string[],
 ): Record<string, unknown> => {
   const motion = node.motion;
   const mix = motion.mix ?? {enter: 1, exit: 1, loop: 1};
@@ -189,6 +190,16 @@ const buildTransform = (
   const positionKeyframes: Array<Record<string, unknown>> = [];
   const scaleKeyframes: Array<Record<string, unknown>> = [];
   const opacityKeyframes: Array<Record<string, unknown>> = [];
+
+  const unsupportedEasingPhases = [
+    motion.enter !== "none" && mix.enter > 0 && motion.enterEasing !== "linear" ? "入场" : null,
+    motion.exit !== "none" && mix.exit > 0 && motion.exitEasing !== "linear" ? "退场" : null,
+  ].filter((phase): phase is string => phase !== null);
+  if (unsupportedEasingPhases.length > 0) {
+    // Lottie POC currently emits transform keyframes without temporal Bezier handles.
+    // Keep the export usable, but make the visual fallback explicit instead of silently diverging.
+    warnings.push(`「${node.name}」${unsupportedEasingPhases.join("、")}曲线在 Lottie 中暂按线性插值导出`);
+  }
 
   // 入场(权重 > 0 且预设可表达)
   if (motion.enter !== "none" && mix.enter > 0) {

@@ -3169,6 +3169,64 @@ body:has(.select-menu) .global-tooltip {
   padding: 0;
 }
 
+.easing-curve-control {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.easing-curve-control > label {
+  display: grid;
+  grid-template-columns: minmax(78px, 0.72fr) minmax(132px, 1.28fr);
+  align-items: center;
+  gap: 12px;
+}
+
+.easing-curve-control > label > span {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 550;
+}
+
+.easing-curve-summary {
+  display: grid;
+  grid-template-columns: 86px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 5px 8px;
+  border: 1px solid color-mix(in srgb, var(--primary) 18%, var(--line));
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--primary) 4%, var(--bg));
+}
+
+.easing-curve-summary svg {
+  width: 86px;
+  height: 36px;
+  overflow: visible;
+}
+
+.easing-curve-guide {
+  fill: none;
+  stroke: var(--line);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+}
+
+.easing-curve-line {
+  fill: none;
+  stroke: var(--focus);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2.2;
+}
+
+.easing-curve-summary small {
+  color: var(--quiet);
+  font-size: 8px;
+  line-height: 1.45;
+}
+
 .field {
   display: flex;
   flex-direction: column;

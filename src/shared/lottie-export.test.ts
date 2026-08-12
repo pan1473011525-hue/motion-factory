@@ -7,7 +7,7 @@ const makeNode = (overrides: Record<string, unknown>): Record<string, unknown> =
   componentId: "rectangle",
   transform: {x: 0.1, y: 0.2, width: 0.4, height: 0.3, rotation: 0, anchorX: 0.5, anchorY: 0.5, opacity: 1, zIndex: 0},
   timing: {from: 10, durationInFrames: 60},
-  motion: {enter: "fade", enterDuration: 15, exit: "none", exitDuration: 15, loop: "none", intensity: 1, mix: {enter: 1, exit: 1, loop: 1}},
+  motion: {enter: "fade", enterDuration: 15, enterEasing: "linear", contentEasing: "linear", exit: "none", exitDuration: 15, exitEasing: "linear", loop: "none", intensity: 1, mix: {enter: 1, exit: 1, loop: 1}},
   props: {},
   hidden: false,
   locked: false,
@@ -76,6 +76,18 @@ describe("lottie export", () => {
     const opacity = layer.ks as Record<string, {a: number; k: unknown[]}>;
     expect(opacity.o.a).toBe(1);
     expect(opacity.o.k).toHaveLength(1);
+  });
+
+  it("warns when Lottie falls back from a non-linear easing curve", () => {
+    const node = makeNode({
+      motion: {...(makeNode({}).motion as Record<string, unknown>), enterEasing: "spring-smooth"},
+    });
+    const {warnings} = buildLottieExport(
+      makeComposition([node]) as never,
+      {width: 1920, height: 1080, fps: {numerator: 30, denominator: 1}},
+      150,
+    );
+    expect(warnings.some((warning) => warning.includes("Lottie") && warning.includes("线性插值"))).toBe(true);
   });
 
   it("skips unsupported layers with a warning", () => {
