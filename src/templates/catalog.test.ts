@@ -6,7 +6,7 @@ import {templateCatalog, upgradeProjectTemplate} from "./catalog";
 
 describe("template catalog", () => {
   it("has unique ids and composition ids with valid defaults", () => {
-    expect(templateCatalog).toHaveLength(46);
+    expect(templateCatalog).toHaveLength(56);
     expect(new Set(templateCatalog.map((template) => template.id)).size).toBe(templateCatalog.length);
     expect(new Set(templateCatalog.map((template) => template.compositionId)).size).toBe(templateCatalog.length);
     for (const template of templateCatalog) {

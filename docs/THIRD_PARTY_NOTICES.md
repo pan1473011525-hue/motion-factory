@@ -50,6 +50,14 @@ Motioner 1.4 起内置来自 [Vincentwei1021/video-shotcraft](https://github.com
 
 Motioner 1.4 起内置 7 个自产 Lottie 动效（加载圆环、加载三点、声波扩散、成功勾选、点赞心形、播放按钮、右向箭头），均为程序化生成的确定性几何动画，随 MIT 开源项目分发，无第三方署名义务。渲染依赖 `@remotion/lottie` 与 `lottie-web`（lottie-web 为 MIT License，@remotion/lottie 遵循 Remotion 上游许可证，见上文 Remotion 一节）。
 
+## 图片展示预设
+
+Motioner 1.5 起新增 10 个图片展示模板（九宫格拼贴、瀑布流、卡片横流、3D 轮播、聚光强调、动态相框、档案堆叠、书封墙、文献卡片、老照片相册）。其中：
+
+- 瀑布流与卡片横流使用 [react-photo-album](https://github.com/igordanchenko/react-photo-album)（MIT License）的布局纯函数。
+- 3D 轮播与聚光强调移植自 video-shotcraft（Apache-2.0，见上节）。
+- 档案堆叠、书封墙、文献卡片、动态相框的形态概念参考 Codrops 系列演示，代码为自写实现（不复制上游代码）。
+
 ## 项目素材与字体
 
 Motioner 不内置第三方商业字体、图库、音乐或演示视频。模板使用 macOS 系统字体栈和程序生成的 SVG/形状。用户导入素材的版权与使用授权由用户自行负责；“收集素材”只复制文件，不授予新权利。

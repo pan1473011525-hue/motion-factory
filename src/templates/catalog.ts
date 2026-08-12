@@ -50,6 +50,16 @@ import {karaokeFillManifest} from "./karaoke-fill/manifest";
 import {grainDissolveManifest} from "./grain-dissolve/manifest";
 import {scanlineAnnotateManifest} from "./scanline-annotate/manifest";
 import {glowFlylineManifest} from "./glow-flyline/manifest";
+import {carousel3dManifest} from "./carousel-3d/manifest";
+import {photoGridCollageManifest} from "./photo-grid-collage/manifest";
+import {photoMasonryManifest} from "./photo-masonry/manifest";
+import {photoRowStripManifest} from "./photo-row-strip/manifest";
+import {polaroidPhotoManifest} from "./polaroid-photo/manifest";
+import {spotlightPhotoManifest} from "./spotlight-photo/manifest";
+import {archiveStackManifest} from "./archive-stack/manifest";
+import {bookShelfManifest} from "./book-shelf/manifest";
+import {documentCardManifest} from "./document-card/manifest";
+import {sepiaAlbumManifest} from "./sepia-album/manifest";
 // motioner-scaffold:manifest-imports
 
 export type AnyTemplateManifest = TemplateManifest<Record<string, unknown>>;
@@ -105,6 +115,16 @@ export const templateCatalog: ReadonlyArray<AnyTemplateManifest> = [
   eraseManifestType(grainDissolveManifest),
   eraseManifestType(scanlineAnnotateManifest),
   eraseManifestType(glowFlylineManifest),
+  eraseManifestType(photoGridCollageManifest),
+  eraseManifestType(photoMasonryManifest),
+  eraseManifestType(photoRowStripManifest),
+  eraseManifestType(carousel3dManifest),
+  eraseManifestType(spotlightPhotoManifest),
+  eraseManifestType(polaroidPhotoManifest),
+  eraseManifestType(archiveStackManifest),
+  eraseManifestType(bookShelfManifest),
+  eraseManifestType(documentCardManifest),
+  eraseManifestType(sepiaAlbumManifest),
   // motioner-scaffold:catalog-items
 ];
 

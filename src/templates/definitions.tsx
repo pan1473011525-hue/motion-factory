@@ -50,6 +50,16 @@ import {KaraokeFill} from "../remotion/generated/karaoke-fill";
 import {GrainDissolve} from "../remotion/generated/grain-dissolve";
 import {ScanlineAnnotate} from "../remotion/generated/scanline-annotate";
 import {GlowFlyline} from "../remotion/generated/glow-flyline";
+import {PhotoGridCollage} from "../remotion/generated/photo-grid-collage";
+import {PhotoMasonry} from "../remotion/generated/photo-masonry";
+import {PhotoRowStrip} from "../remotion/generated/photo-row-strip";
+import {Carousel3d} from "../remotion/generated/carousel-3d";
+import {SpotlightPhoto} from "../remotion/generated/spotlight-photo";
+import {PolaroidPhoto} from "../remotion/generated/polaroid-photo";
+import {ArchiveStack} from "../remotion/generated/archive-stack";
+import {BookShelf} from "../remotion/generated/book-shelf";
+import {DocumentCard} from "../remotion/generated/document-card";
+import {SepiaAlbum} from "../remotion/generated/sepia-album";
 // motioner-scaffold:component-imports
 import {alphaTestCardManifest} from "./alpha-test-card/manifest";
 import {beforeAfterManifest} from "./before-after/manifest";
@@ -97,6 +107,16 @@ import {karaokeFillManifest} from "./karaoke-fill/manifest";
 import {grainDissolveManifest} from "./grain-dissolve/manifest";
 import {scanlineAnnotateManifest} from "./scanline-annotate/manifest";
 import {glowFlylineManifest} from "./glow-flyline/manifest";
+import {photoGridCollageManifest} from "./photo-grid-collage/manifest";
+import {photoMasonryManifest} from "./photo-masonry/manifest";
+import {photoRowStripManifest} from "./photo-row-strip/manifest";
+import {carousel3dManifest} from "./carousel-3d/manifest";
+import {spotlightPhotoManifest} from "./spotlight-photo/manifest";
+import {polaroidPhotoManifest} from "./polaroid-photo/manifest";
+import {archiveStackManifest} from "./archive-stack/manifest";
+import {bookShelfManifest} from "./book-shelf/manifest";
+import {documentCardManifest} from "./document-card/manifest";
+import {sepiaAlbumManifest} from "./sepia-album/manifest";
 // motioner-scaffold:manifest-imports
 
 export type RuntimeDefinition = TemplateDefinition<
@@ -155,6 +175,16 @@ export const runtimeTemplates: ReadonlyArray<RuntimeDefinition> = [
   eraseDefinitionType(defineTemplate({...grainDissolveManifest, component: GrainDissolve})),
   eraseDefinitionType(defineTemplate({...scanlineAnnotateManifest, component: ScanlineAnnotate})),
   eraseDefinitionType(defineTemplate({...glowFlylineManifest, component: GlowFlyline})),
+  eraseDefinitionType(defineTemplate({...photoGridCollageManifest, component: PhotoGridCollage})),
+  eraseDefinitionType(defineTemplate({...photoMasonryManifest, component: PhotoMasonry})),
+  eraseDefinitionType(defineTemplate({...photoRowStripManifest, component: PhotoRowStrip})),
+  eraseDefinitionType(defineTemplate({...carousel3dManifest, component: Carousel3d})),
+  eraseDefinitionType(defineTemplate({...spotlightPhotoManifest, component: SpotlightPhoto})),
+  eraseDefinitionType(defineTemplate({...polaroidPhotoManifest, component: PolaroidPhoto})),
+  eraseDefinitionType(defineTemplate({...archiveStackManifest, component: ArchiveStack})),
+  eraseDefinitionType(defineTemplate({...bookShelfManifest, component: BookShelf})),
+  eraseDefinitionType(defineTemplate({...documentCardManifest, component: DocumentCard})),
+  eraseDefinitionType(defineTemplate({...sepiaAlbumManifest, component: SepiaAlbum})),
   // motioner-scaffold:runtime-items
 ];
 
