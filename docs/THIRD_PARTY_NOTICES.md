@@ -46,6 +46,10 @@ Motioner 1.4 起内置来自 [Vincentwei1021/video-shotcraft](https://github.com
 
 所有内置组件均已完成参数化与坐标系适配（详见 `docs/TEMPLATE_INGESTION_PLAN.md`），每个组件文件头保留上游 Apache 版权声明。上游许可证文本：https://www.apache.org/licenses/LICENSE-2.0
 
+## 内置 Lottie 动效
+
+Motioner 1.4 起内置 7 个自产 Lottie 动效（加载圆环、加载三点、声波扩散、成功勾选、点赞心形、播放按钮、右向箭头），均为程序化生成的确定性几何动画，随 MIT 开源项目分发，无第三方署名义务。渲染依赖 `@remotion/lottie` 与 `lottie-web`（lottie-web 为 MIT License，@remotion/lottie 遵循 Remotion 上游许可证，见上文 Remotion 一节）。
+
 ## 项目素材与字体
 
 Motioner 不内置第三方商业字体、图库、音乐或演示视频。模板使用 macOS 系统字体栈和程序生成的 SVG/形状。用户导入素材的版权与使用授权由用户自行负责；“收集素材”只复制文件，不授予新权利。

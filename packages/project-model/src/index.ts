@@ -87,6 +87,7 @@ export const composerComponentIdSchema = z.enum([
   "skeleton-reveal",
   "svg-trace",
   "odometer-roll",
+  "lottie",
   "template",
 ]);
 

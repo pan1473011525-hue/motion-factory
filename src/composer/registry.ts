@@ -7,6 +7,7 @@ import type {
   ProjectAsset,
 } from "../../packages/project-model/src";
 import type {InspectorField} from "../../packages/template-sdk/src";
+import {lottieAssets} from "./lottie-assets";
 
 export type ComposerComponentCategory = "text" | "shape" | "data" | "media" | "layout";
 
@@ -264,6 +265,16 @@ export const composerComponents: ReadonlyArray<ComposerComponentDefinition> = [
       {key: "suffix", label: "后缀", section: "content", control: "text", maxLength: 8},
       {key: "color", label: "数字颜色", section: "style", control: "color"},
       {key: "accentColor", label: "强调色", section: "style", control: "color"},
+    ],
+  },
+  {
+    id: "lottie", name: "动效动画", category: "media", description: "内置 Lottie 动效（加载/反馈/装饰），可循环。", preview: "▶",
+    defaultSize: {width: 0.3, height: 0.3},
+    defaultProps: {assetId: "loader-ring", loop: true},
+    schema: z.object({assetId: z.string().min(1), loop: z.boolean()}),
+    fields: [
+      {key: "assetId", label: "动效", section: "content", control: "select", options: lottieAssets.map((asset) => ({label: asset.name, value: asset.id}))},
+      {key: "loop", label: "循环播放", section: "layout", control: "boolean"},
     ],
   },
   {

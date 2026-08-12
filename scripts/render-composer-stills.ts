@@ -17,9 +17,10 @@ scene.nodes = [
   createComposerNode("progress", "progress", durationInFrames, 3),
   createComposerNode("bar-chart", "chart", durationInFrames, 4),
   createComposerNode("image", "image", durationInFrames, 5),
+  createComposerNode("lottie", "lottie", durationInFrames, 6),
 ];
-const [surface, title, stat, progress, chart, image] = scene.nodes;
-if (!surface || !title || !stat || !progress || !chart || !image) throw new Error("无法创建 Composer 视觉测试场景");
+const [surface, title, stat, progress, chart, image, lottieNode] = scene.nodes;
+if (!surface || !title || !stat || !progress || !chart || !image || !lottieNode) throw new Error("无法创建 Composer 视觉测试场景");
 surface.name = "底板";
 surface.transform = {...surface.transform, x: 0.04, y: 0.07, width: 0.92, height: 0.86, opacity: 0.92};
 surface.props = {...surface.props, fill: "#111821", borderColor: "#314052", borderWidth: 2, radius: 34};
@@ -40,6 +41,9 @@ chart.motion.enter = "slide-right";
 image.transform = {...image.transform, x: 0.68, y: 0.72, width: 0.2, height: 0.14};
 image.props = {...image.props, assetId: "visual-fixture", fit: "cover", radius: 14};
 image.motion.enter = "blur";
+lottieNode.transform = {...lottieNode.transform, x: 0.56, y: 0.7, width: 0.18, height: 0.18};
+lottieNode.props = {...lottieNode.props, assetId: "loader-ring", loop: true};
+lottieNode.motion.enter = "fade";
 
 const fixturePath = join(root, "scripts", "fixtures", "media-sample.svg");
 const fixtureAsset = {

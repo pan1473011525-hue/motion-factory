@@ -15,6 +15,8 @@ import type {
 import {getComposerComponent} from "./registry";
 import {getComposerEasingFunction} from "./easing";
 import {getRuntimeTemplate} from "../templates/definitions";
+import {lottieAssets} from "./lottie-assets";
+import {Lottie} from "@remotion/lottie";
 import {
   MediaSlot,
   useMotionSettings,
@@ -248,6 +250,15 @@ const ComponentContent: React.FC<{node: ComposerNode; unit: number}> = ({node, u
         {asString(props.suffix).split("").map((ch, i) => <div key={`s${i}`} style={{flex: 1}}>{glyph(ch)}</div>)}
       </div>
     </div>;
+  }
+
+  if (node.componentId === "lottie") {
+    const asset = lottieAssets.find((candidate) => candidate.id === asString(props.assetId)) ?? lottieAssets[0];
+    return (
+      <div style={{...full, display: "flex", alignItems: "center", justifyContent: "center"}}>
+        <Lottie animationData={asset.data} loop={asBoolean(props.loop, true)} style={{width: "100%", height: "100%"}} />
+      </div>
+    );
   }
 
   if (node.componentId === "template") {
