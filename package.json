@@ -4,9 +4,12 @@
   "description": "Motioner — macOS / Windows 参数化透明动效生成器",
   "author": "monarch",
   "main": "./out/main/index.js",
-  "repository": {},
-  "license": "UNLICENSED",
-  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pan1473011525-hue/motion-factory.git"
+  },
+  "license": "MIT",
+  "private": false,
   "packageManager": "pnpm@11.16.0",
   "dependencies": {
     "@remotion/animation-utils": "4.0.507",
