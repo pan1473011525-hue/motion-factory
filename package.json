@@ -1,6 +1,6 @@
 {
   "name": "motioner",
-  "version": "1.5.0",
+  "version": "1.5.1",
   "description": "Motioner — macOS / Windows 参数化透明动效生成器",
   "author": "monarch",
   "main": "./out/main/index.js",
