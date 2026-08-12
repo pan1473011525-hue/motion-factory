@@ -1,6 +1,7 @@
 // 老照片相册：sepia 滤镜 + 颗粒 + 印章水印 + 纸纹底，照片错峰淡入堆叠（自写）
 import type {SepiaAlbumProps} from "../../templates/sepia-album/manifest";
-import {AlphaSurface, MediaSlot, SafeArea, ThemeProvider, useCanvasUnit} from "../primitives";
+import {AlphaSurface, SafeArea, ThemeProvider, useCanvasUnit} from "../primitives";
+import {PhotoTile} from "../photo-tile";
 import {Easing, interpolate, useCurrentFrame, useVideoConfig} from "remotion";
 
 const PER_ITEM = 8; // 每张间隔（30fps 基准）
@@ -11,7 +12,8 @@ export const SepiaAlbum: React.FC<SepiaAlbumProps> = (props) => {
   const unit = useCanvasUnit();
   const f = (n: number) => Math.max(1, Math.round((n * fps) / 30));
 
-  const assets = [props.asset1, props.asset2, props.asset3, props.asset4, props.asset5, props.asset6].filter(Boolean);
+  const rawAssets = [props.asset1, props.asset2, props.asset3, props.asset4, props.asset5, props.asset6].filter(Boolean);
+  const assets = rawAssets.length > 0 ? rawAssets : ["", "", "", "", ""];
   const N = assets.length;
   if (N === 0) return null;
 
@@ -45,7 +47,7 @@ export const SepiaAlbum: React.FC<SepiaAlbumProps> = (props) => {
                     zIndex: i,
                   }}>
                     <div style={{width: "100%", height: "100%", overflow: "hidden", filter: "sepia(0.62) contrast(1.06) saturate(0.9)"}}>
-                      <MediaSlot assetId={assetId} radius={0} label={`照片 ${i + 1}`} />
+                      <PhotoTile assetId={assetId} index={i} label={`照片 ${i + 1}`} />
                     </div>
                     {/* 颗粒 */}
                     <div style={{position: "absolute", inset: 0, opacity: 0.22, backgroundImage: "radial-gradient(rgba(60,50,40,0.5) 0.5px, transparent 0.6px)", backgroundSize: "4px 4px"}} />

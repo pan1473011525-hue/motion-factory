@@ -1,7 +1,8 @@
 // 九宫格拼贴：网格布局 + 逐张错峰弹入（scale + 微旋转 + 浮起）
 // 布局为手写规则网格；动效帧驱动确定性（rotate 方向按序号奇偶，动画按 30fps 基准帧号换算）。
 import type {PhotoGridCollageProps} from "../../templates/photo-grid-collage/manifest";
-import {AlphaSurface, MediaSlot, SafeArea, ThemeProvider, useCanvasUnit} from "../primitives";
+import {AlphaSurface, SafeArea, ThemeProvider, useCanvasUnit} from "../primitives";
+import {PhotoTile} from "../photo-tile";
 import {Easing, interpolate, useCurrentFrame, useVideoConfig} from "remotion";
 
 const PER_ITEM = 10; // 每张间隔
@@ -12,7 +13,8 @@ export const PhotoGridCollage: React.FC<PhotoGridCollageProps> = (props) => {
   const unit = useCanvasUnit();
   const f = (n: number) => Math.max(1, Math.round((n * fps) / 30));
 
-  const assets = [props.asset1, props.asset2, props.asset3, props.asset4, props.asset5, props.asset6, props.asset7, props.asset8, props.asset9].filter(Boolean);
+  const rawAssets = [props.asset1, props.asset2, props.asset3, props.asset4, props.asset5, props.asset6, props.asset7, props.asset8, props.asset9].filter(Boolean);
+  const assets = rawAssets.length > 0 ? rawAssets : ["", "", "", ""];
   const columns = Math.min(props.columns, Math.max(1, assets.length));
   const rows = Math.max(1, Math.ceil(assets.length / columns));
   const gap = props.gap * unit;
@@ -40,7 +42,7 @@ export const PhotoGridCollage: React.FC<PhotoGridCollageProps> = (props) => {
                     transform: `scale(${0.82 + progress * 0.18}) rotate(${rotate}deg) translateY(${(1 - appear) * 40 * unit}px)`,
                     boxShadow: "0 8px 24px rgba(0,0,0,0.35)",
                   }}>
-                    <MediaSlot assetId={assetId} radius={0} label={`图片 ${index + 1}`} />
+                    <PhotoTile assetId={assetId} index={index} label={`图片 ${index + 1}`} />
                   </div>
                 );
               })}

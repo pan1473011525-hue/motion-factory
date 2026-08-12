@@ -1,7 +1,8 @@
 // 动态相框（宝丽来）：白边相框 + 错位堆叠散开 + 逐张弹入 + 可叠标签
 // 形态参考 Codrops Polaroid 概念（只借几何，代码自写）；动效帧驱动确定性。
 import type {PolaroidPhotoProps} from "../../templates/polaroid-photo/manifest";
-import {AlphaSurface, MediaSlot, SafeArea, ThemeProvider, useCanvasUnit} from "../primitives";
+import {AlphaSurface, SafeArea, ThemeProvider, useCanvasUnit} from "../primitives";
+import {PhotoTile} from "../photo-tile";
 import {Easing, interpolate, useCurrentFrame, useVideoConfig} from "remotion";
 
 const PER_ITEM = 8; // 每张间隔帧（30fps 基准）
@@ -12,7 +13,8 @@ export const PolaroidPhoto: React.FC<PolaroidPhotoProps> = (props) => {
   const unit = useCanvasUnit();
   const f = (n: number) => Math.max(1, Math.round((n * fps) / 30));
 
-  const assets = [props.asset1, props.asset2, props.asset3, props.asset4, props.asset5, props.asset6].filter(Boolean);
+  const rawAssets = [props.asset1, props.asset2, props.asset3, props.asset4, props.asset5, props.asset6].filter(Boolean);
+  const assets = rawAssets.length > 0 ? rawAssets : ["", "", "", "", ""];
   const N = assets.length;
   if (N === 0) return null;
 
@@ -53,7 +55,7 @@ export const PolaroidPhoto: React.FC<PolaroidPhotoProps> = (props) => {
                     zIndex: i,
                   }}>
                     <div style={{width: imgW, height: imgH, overflow: "hidden"}}>
-                      <MediaSlot assetId={assetId} radius={0} label={`照片 ${i + 1}`} />
+                      <PhotoTile assetId={assetId} index={i} label={`照片 ${i + 1}`} />
                     </div>
                     {/* 手写区 */}
                     <div style={{

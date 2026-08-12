@@ -1,7 +1,8 @@
 // 卡片横流：computeRowsLayout 等宽行 + 卡片从左向右依次滑入
 // 布局使用按序号分配的比例模式，MediaSlot cover 裁切填充。
 import type {PhotoRowStripProps} from "../../templates/photo-row-strip/manifest";
-import {AlphaSurface, MediaSlot, SafeArea, ThemeProvider, useCanvasUnit} from "../primitives";
+import {AlphaSurface, SafeArea, ThemeProvider, useCanvasUnit} from "../primitives";
+import {PhotoTile} from "../photo-tile";
 import {computeRowsLayout} from "react-photo-album";
 import {Easing, interpolate, useCurrentFrame, useVideoConfig} from "remotion";
 
@@ -18,7 +19,8 @@ export const PhotoRowStrip: React.FC<PhotoRowStripProps> = (props) => {
   const unit = useCanvasUnit();
   const f = (n: number) => Math.max(1, Math.round((n * fps) / 30));
 
-  const assets = [props.asset1, props.asset2, props.asset3, props.asset4, props.asset5, props.asset6, props.asset7, props.asset8].filter(Boolean);
+  const rawAssets = [props.asset1, props.asset2, props.asset3, props.asset4, props.asset5, props.asset6, props.asset7, props.asset8].filter(Boolean);
+  const assets = rawAssets.length > 0 ? rawAssets : ["", "", "", "", ""];
   const gap = props.gap * unit;
   const radius = props.radius * unit;
   const containerWidth = 1920 * unit * 0.94;
@@ -47,7 +49,7 @@ export const PhotoRowStrip: React.FC<PhotoRowStripProps> = (props) => {
                         transform: `translateX(${(1 - progress) * 120 * unit}px)`,
                       }}>
                         <div style={{width: "100%", height: "100%", overflow: "hidden", borderRadius: radius, boxShadow: "0 8px 22px rgba(0,0,0,0.3)"}}>
-                          <MediaSlot assetId={item.photo.src} radius={0} label={`图片 ${item.index + 1}`} />
+                          <PhotoTile assetId={item.photo.src} index={item.index} label={`图片 ${item.index + 1}`} />
                         </div>
                       </div>
                     );

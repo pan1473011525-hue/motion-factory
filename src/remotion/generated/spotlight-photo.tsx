@@ -3,7 +3,8 @@
 // 改动：文字替换为图片媒体槽（单张居中或 1-3 张横排）；背景透明（弃用暗色底，图片自持暗调可选）；
 // 时间轴按 30fps 基准帧号换算；坐标系画布自适应。聚光扫动/提亮定格逻辑保留。
 import type {SpotlightPhotoProps} from "../../templates/spotlight-photo/manifest";
-import {AlphaSurface, MediaSlot, ThemeProvider, useCanvasUnit} from "../primitives";
+import {AlphaSurface, ThemeProvider, useCanvasUnit} from "../primitives";
+import {PhotoTile} from "../photo-tile";
 import {Easing, interpolate, useCurrentFrame, useVideoConfig} from "remotion";
 
 const SWEEP_END = 110; // 两个来回结束（30fps 基准）
@@ -17,7 +18,8 @@ export const SpotlightPhoto: React.FC<SpotlightPhotoProps> = (props) => {
   const unit = useCanvasUnit();
   const f = (n: number) => Math.max(1, Math.round((n * fps) / 30));
 
-  const assets = [props.asset1, props.asset2, props.asset3].filter(Boolean);
+  const rawAssets = [props.asset1, props.asset2, props.asset3].filter(Boolean);
+  const assets = rawAssets.length > 0 ? rawAssets : ["", "", ""];
   const W = 1920 * unit;
   const H = 1080 * unit;
   const CX = W / 2;
@@ -39,7 +41,7 @@ export const SpotlightPhoto: React.FC<SpotlightPhotoProps> = (props) => {
     <div style={{position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", gap: 36 * unit, opacity}}>
       {assets.map((assetId, i) => (
         <div key={i} style={{width: imgW, height: imgH, overflow: "hidden", borderRadius: 16 * unit, boxShadow: "0 14px 40px rgba(0,0,0,0.45)"}}>
-          <MediaSlot assetId={assetId} radius={0} label={`图片 ${i + 1}`} />
+          <PhotoTile assetId={assetId} index={i} label={`图片 ${i + 1}`} />
         </div>
       ))}
     </div>

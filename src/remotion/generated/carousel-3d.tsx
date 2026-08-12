@@ -3,7 +3,8 @@
 // 改动：卡片装饰内容替换为图片媒体槽；速度/半径/强调色参数化；DesignStage 480×270 改为画布自适应；
 // 背景透明（弃用径向渐变夜幕）；时间轴按 30fps 基准帧号换算。
 import type {Carousel3dProps} from "../../templates/carousel-3d/manifest";
-import {AlphaSurface, MediaSlot, ThemeProvider, useCanvasUnit} from "../primitives";
+import {AlphaSurface, ThemeProvider, useCanvasUnit} from "../primitives";
+import {PhotoTile} from "../photo-tile";
 import {useCurrentFrame, useVideoConfig} from "remotion";
 
 const SPIN_360_FRAMES = 168; // 30fps 基准下一整圈的帧数
@@ -14,7 +15,8 @@ export const Carousel3d: React.FC<Carousel3dProps> = (props) => {
   const unit = useCanvasUnit();
   const f = (n: number) => Math.max(1, Math.round((n * fps) / 30));
 
-  const assets = [props.asset1, props.asset2, props.asset3, props.asset4, props.asset5, props.asset6, props.asset7, props.asset8].filter(Boolean);
+  const rawAssets = [props.asset1, props.asset2, props.asset3, props.asset4, props.asset5, props.asset6, props.asset7, props.asset8].filter(Boolean);
+  const assets = rawAssets.length > 0 ? rawAssets : ["", "", "", ""];
   const N = assets.length;
   if (N === 0) return null;
 
@@ -49,8 +51,8 @@ export const Carousel3d: React.FC<Carousel3dProps> = (props) => {
                     width: cardW, height: cardH, transformStyle: "preserve-3d",
                     transform: `rotateY(${(i * 360) / N}deg) translateZ(${radius}px)`,
                   }}>
-                    <div style={faceStyle}><MediaSlot assetId={assetId} radius={0} label={`图片 ${i + 1}`} /></div>
-                    <div style={{...faceStyle, transform: "rotateY(180deg)"}}><MediaSlot assetId={assetId} radius={0} label={`图片 ${i + 1}`} /></div>
+                    <div style={faceStyle}><PhotoTile assetId={assetId} index={i} label={`图片 ${i + 1}`} /></div>
+                    <div style={{...faceStyle, transform: "rotateY(180deg)"}}><PhotoTile assetId={assetId} index={i} label={`图片 ${i + 1}`} /></div>
                   </div>
                 );
               })}

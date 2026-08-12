@@ -1,6 +1,7 @@
 // 档案堆叠：纸张白边卡从中心克制散开成网格（形态参考 Codrops ImageStackGrid 概念，代码自写）
 import type {ArchiveStackProps} from "../../templates/archive-stack/manifest";
-import {AlphaSurface, MediaSlot, SafeArea, ThemeProvider, useCanvasUnit} from "../primitives";
+import {AlphaSurface, SafeArea, ThemeProvider, useCanvasUnit} from "../primitives";
+import {PhotoTile} from "../photo-tile";
 import {Easing, interpolate, useCurrentFrame, useVideoConfig} from "remotion";
 
 const PER_ITEM = 7; // 每张间隔（30fps 基准）
@@ -12,7 +13,8 @@ export const ArchiveStack: React.FC<ArchiveStackProps> = (props) => {
   const unit = useCanvasUnit();
   const f = (n: number) => Math.max(1, Math.round((n * fps) / 30));
 
-  const assets = [props.asset1, props.asset2, props.asset3, props.asset4, props.asset5, props.asset6].filter(Boolean);
+  const rawAssets = [props.asset1, props.asset2, props.asset3, props.asset4, props.asset5, props.asset6].filter(Boolean);
+  const assets = rawAssets.length > 0 ? rawAssets : ["", "", "", "", ""];
   const N = assets.length;
   if (N === 0) return null;
 
@@ -51,7 +53,7 @@ export const ArchiveStack: React.FC<ArchiveStackProps> = (props) => {
                     overflow: "hidden", zIndex: i,
                   }}>
                     <div style={{width: "100%", height: cardH - 46 * unit, overflow: "hidden"}}>
-                      <MediaSlot assetId={assetId} radius={0} label={`资料 ${i + 1}`} />
+                      <PhotoTile assetId={assetId} index={i} label={`资料 ${i + 1}`} />
                     </div>
                     <div style={{height: 46 * unit, display: "flex", alignItems: "center", justifyContent: "space-between", padding: `0 ${14 * unit}px`, boxSizing: "border-box"}}>
                       <span style={{fontSize: 16 * unit, color: "rgba(70,64,56,0.6)", fontFamily: "Georgia, serif"}}>档案 · {String(i + 1).padStart(2, "0")}</span>

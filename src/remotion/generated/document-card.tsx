@@ -1,6 +1,7 @@
 // 文献卡片：引用卡片错位堆叠、逐张浮起，带档案编号与年份标签（形态参考 Codrops StackMotion 概念，代码自写）
 import type {DocumentCardProps} from "../../templates/document-card/manifest";
-import {AlphaSurface, MediaSlot, SafeArea, ThemeProvider, useCanvasUnit} from "../primitives";
+import {AlphaSurface, SafeArea, ThemeProvider, useCanvasUnit} from "../primitives";
+import {PhotoTile} from "../photo-tile";
 import {Easing, interpolate, useCurrentFrame, useVideoConfig} from "remotion";
 
 const PER_ITEM = 9; // 每张间隔（30fps 基准）
@@ -11,7 +12,8 @@ export const DocumentCard: React.FC<DocumentCardProps> = (props) => {
   const unit = useCanvasUnit();
   const f = (n: number) => Math.max(1, Math.round((n * fps) / 30));
 
-  const assets = [props.asset1, props.asset2, props.asset3, props.asset4, props.asset5, props.asset6].filter(Boolean);
+  const rawAssets = [props.asset1, props.asset2, props.asset3, props.asset4, props.asset5, props.asset6].filter(Boolean);
+  const assets = rawAssets.length > 0 ? rawAssets : ["", "", "", "", ""];
   const N = assets.length;
   if (N === 0) return null;
 
@@ -54,7 +56,7 @@ export const DocumentCard: React.FC<DocumentCardProps> = (props) => {
                       {String(i + 1).padStart(2, "0")}
                     </div>
                     <div style={{width: "100%", height: cardH - 64 * unit, overflow: "hidden"}}>
-                      <MediaSlot assetId={assetId} radius={0} label={`文献 ${i + 1}`} />
+                      <PhotoTile assetId={assetId} index={i} label={`文献 ${i + 1}`} />
                     </div>
                     <div style={{height: 64 * unit, display: "flex", alignItems: "center", justifyContent: "space-between", padding: `0 ${18 * unit}px`, boxSizing: "border-box"}}>
                       <span style={{fontSize: 17 * unit, color: "rgba(60,56,50,0.75)", fontFamily: "Georgia, serif", fontStyle: "italic"}}>{props.year}</span>

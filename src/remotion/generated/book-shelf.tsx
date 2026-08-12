@@ -1,6 +1,7 @@
 // 书封墙：书籍封面网格逐排滑入 + 定格微摆（形态参考 Codrops BookPreview 概念，代码自写）
 import type {BookShelfProps} from "../../templates/book-shelf/manifest";
-import {AlphaSurface, MediaSlot, SafeArea, ThemeProvider, useCanvasUnit} from "../primitives";
+import {AlphaSurface, SafeArea, ThemeProvider, useCanvasUnit} from "../primitives";
+import {PhotoTile} from "../photo-tile";
 import {Easing, interpolate, useCurrentFrame, useVideoConfig} from "remotion";
 
 const ROW_DELAY = 6; // 排间隔（30fps 基准）
@@ -12,7 +13,8 @@ export const BookShelf: React.FC<BookShelfProps> = (props) => {
   const unit = useCanvasUnit();
   const f = (n: number) => Math.max(1, Math.round((n * fps) / 30));
 
-  const assets = [props.asset1, props.asset2, props.asset3, props.asset4, props.asset5, props.asset6, props.asset7, props.asset8].filter(Boolean);
+  const rawAssets = [props.asset1, props.asset2, props.asset3, props.asset4, props.asset5, props.asset6, props.asset7, props.asset8].filter(Boolean);
+  const assets = rawAssets.length > 0 ? rawAssets : ["", "", "", ""];
   const N = assets.length;
   if (N === 0) return null;
 
@@ -45,7 +47,7 @@ export const BookShelf: React.FC<BookShelfProps> = (props) => {
                       transform: `translateX(${(1 - progress) * 160 * unit}px) rotate(${rot}deg)`,
                     }}>
                       <div style={{width: "100%", height: "100%", overflow: "hidden", borderRadius: 6 * unit, boxShadow: "0 14px 34px rgba(0,0,0,0.4)"}}>
-                        <MediaSlot assetId={assetId} radius={0} label={`封面 ${i + 1}`} />
+                        <PhotoTile assetId={assetId} index={i} label={`封面 ${i + 1}`} />
                       </div>
                       {/* 书脊高光 */}
                       <div style={{position: "absolute", left: 0, top: 0, bottom: 0, width: 8 * unit, background: "rgba(255,255,255,0.18)"}} />

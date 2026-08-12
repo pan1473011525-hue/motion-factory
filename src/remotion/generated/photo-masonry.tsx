@@ -1,7 +1,8 @@
 // 瀑布流：computeMasonryLayout 布局 + 整墙缓滚 + 逐张浮起
 // 布局使用按序号分配的比例模式（无真实尺寸时提供错落感），MediaSlot cover 裁切填充。
 import type {PhotoMasonryProps} from "../../templates/photo-masonry/manifest";
-import {AlphaSurface, MediaSlot, SafeArea, ThemeProvider, useCanvasUnit} from "../primitives";
+import {AlphaSurface, SafeArea, ThemeProvider, useCanvasUnit} from "../primitives";
+import {PhotoTile} from "../photo-tile";
 import {computeMasonryLayout} from "react-photo-album";
 import {Easing, interpolate, useCurrentFrame, useVideoConfig} from "remotion";
 
@@ -21,7 +22,8 @@ export const PhotoMasonry: React.FC<PhotoMasonryProps> = (props) => {
   const unit = useCanvasUnit();
   const f = (n: number) => Math.max(1, Math.round((n * fps) / 30));
 
-  const assets = [props.asset1, props.asset2, props.asset3, props.asset4, props.asset5, props.asset6, props.asset7, props.asset8, props.asset9].filter(Boolean);
+  const rawAssets = [props.asset1, props.asset2, props.asset3, props.asset4, props.asset5, props.asset6, props.asset7, props.asset8, props.asset9].filter(Boolean);
+  const assets = rawAssets.length > 0 ? rawAssets : ["", "", "", "", "", ""];
   const gap = props.gap * unit;
   const radius = props.radius * unit;
   const containerWidth = 1920 * unit * 0.94;
@@ -67,7 +69,7 @@ export const PhotoMasonry: React.FC<PhotoMasonryProps> = (props) => {
                     transform: `translateY(${(1 - progress) * 60 * unit}px)`,
                   }}>
                     <div style={{width: "100%", height: "100%", overflow: "hidden", borderRadius: radius, boxShadow: "0 6px 18px rgba(0,0,0,0.3)"}}>
-                      <MediaSlot assetId={item.src} radius={0} label={`图片 ${item.index + 1}`} />
+                      <PhotoTile assetId={item.src} index={item.index} label={`图片 ${item.index + 1}`} />
                     </div>
                   </div>
                 );
