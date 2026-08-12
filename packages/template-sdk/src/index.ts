@@ -1,7 +1,7 @@
 import type {ZodType} from "zod";
 
 export type DurationMode = "stretch" | "fixed-edges" | "loop" | "paginate";
-export type TemplateCategory = "data" | "chart" | "information" | "subtitle" | "media";
+export type TemplateCategory = "data" | "chart" | "information" | "subtitle" | "transition" | "media";
 export type InspectorSection = "content" | "data" | "source" | "style" | "animation" | "layout";
 
 type InspectorFieldBase<Key extends string> = {

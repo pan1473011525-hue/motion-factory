@@ -4,9 +4,9 @@ import {Star} from "lucide-react";
 import {templateCatalog, type AnyTemplateManifest} from "../../templates/catalog";
 import {MotionerComposition} from "../../templates/runtime";
 
-type CategoryFilter = "all" | "data" | "chart" | "information" | "subtitle" | "media" | "favorite" | "recent";
+type CategoryFilter = "all" | "data" | "chart" | "information" | "subtitle" | "transition" | "media" | "favorite" | "recent";
 
-const categoryLabels: Record<CategoryFilter, string> = {all: "全部", data: "数据", chart: "图表", information: "资料", subtitle: "字幕", media: "素材", favorite: "收藏", recent: "最近"};
+const categoryLabels: Record<CategoryFilter, string> = {all: "全部", data: "数据", chart: "图表", information: "资料", subtitle: "字幕", transition: "转场", media: "素材", favorite: "收藏", recent: "最近"};
 
 const formatMinimumDuration = (frames: number): string => {
   const seconds = frames / 30;

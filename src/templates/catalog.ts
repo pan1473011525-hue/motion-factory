@@ -26,6 +26,18 @@ import {routeMapManifest} from "./route-map/manifest";
 import {splitScreenManifest} from "./split-screen/manifest";
 import {sportsScoreboardManifest} from "./sports-scoreboard/manifest";
 import {stackedBarsManifest} from "./stacked-bars/manifest";
+import {transitionWipeBlindsManifest} from "./transition-wipe-blinds/manifest";
+import {transitionWipeClockManifest} from "./transition-wipe-clock/manifest";
+import {transitionIrisManifest} from "./transition-iris/manifest";
+import {transitionInkManifest} from "./transition-ink/manifest";
+import {transitionGlitchManifest} from "./transition-glitch/manifest";
+import {transitionGradientLinearManifest} from "./transition-gradient-linear/manifest";
+import {transitionGradientRadialManifest} from "./transition-gradient-radial/manifest";
+import {transitionGradientConicManifest} from "./transition-gradient-conic/manifest";
+import {typewriterTerminalManifest} from "./typewriter-terminal/manifest";
+import {typewriterRetypeManifest} from "./typewriter-retype/manifest";
+import {textScrambleManifest} from "./text-scramble/manifest";
+import {splitFlapManifest} from "./split-flap/manifest";
 // motioner-scaffold:manifest-imports
 
 export type AnyTemplateManifest = TemplateManifest<Record<string, unknown>>;
@@ -57,6 +69,18 @@ export const templateCatalog: ReadonlyArray<AnyTemplateManifest> = [
   eraseManifestType(mediaCarouselManifest),
   eraseManifestType(beforeAfterManifest),
   eraseManifestType(splitScreenManifest),
+  eraseManifestType(transitionWipeBlindsManifest),
+  eraseManifestType(transitionWipeClockManifest),
+  eraseManifestType(transitionIrisManifest),
+  eraseManifestType(transitionInkManifest),
+  eraseManifestType(transitionGlitchManifest),
+  eraseManifestType(transitionGradientLinearManifest),
+  eraseManifestType(transitionGradientRadialManifest),
+  eraseManifestType(transitionGradientConicManifest),
+  eraseManifestType(typewriterTerminalManifest),
+  eraseManifestType(typewriterRetypeManifest),
+  eraseManifestType(textScrambleManifest),
+  eraseManifestType(splitFlapManifest),
   // motioner-scaffold:catalog-items
 ];
 

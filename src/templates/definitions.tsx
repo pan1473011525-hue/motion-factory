@@ -26,6 +26,18 @@ import {
   SportsScoreboard,
   StackedBars,
 } from "../remotion/AdvancedTemplates";
+import {TransitionWipeBlinds} from "../remotion/generated/transition-wipe-blinds";
+import {TransitionWipeClock} from "../remotion/generated/transition-wipe-clock";
+import {TransitionIris} from "../remotion/generated/transition-iris";
+import {TransitionInk} from "../remotion/generated/transition-ink";
+import {TransitionGlitch} from "../remotion/generated/transition-glitch";
+import {TransitionGradientLinear} from "../remotion/generated/transition-gradient-linear";
+import {TransitionGradientRadial} from "../remotion/generated/transition-gradient-radial";
+import {TransitionGradientConic} from "../remotion/generated/transition-gradient-conic";
+import {TypewriterTerminal} from "../remotion/generated/typewriter-terminal";
+import {TypewriterRetype} from "../remotion/generated/typewriter-retype";
+import {TextScramble} from "../remotion/generated/text-scramble";
+import {SplitFlap} from "../remotion/generated/split-flap";
 // motioner-scaffold:component-imports
 import {alphaTestCardManifest} from "./alpha-test-card/manifest";
 import {beforeAfterManifest} from "./before-after/manifest";
@@ -49,6 +61,18 @@ import {stackedBarsManifest} from "./stacked-bars/manifest";
 import {statCounterManifest} from "./stat-counter/manifest";
 import {timelineManifest} from "./timeline/manifest";
 import {verticalBarsManifest} from "./vertical-bars/manifest";
+import {transitionWipeBlindsManifest} from "./transition-wipe-blinds/manifest";
+import {transitionWipeClockManifest} from "./transition-wipe-clock/manifest";
+import {transitionIrisManifest} from "./transition-iris/manifest";
+import {transitionInkManifest} from "./transition-ink/manifest";
+import {transitionGlitchManifest} from "./transition-glitch/manifest";
+import {transitionGradientLinearManifest} from "./transition-gradient-linear/manifest";
+import {transitionGradientRadialManifest} from "./transition-gradient-radial/manifest";
+import {transitionGradientConicManifest} from "./transition-gradient-conic/manifest";
+import {typewriterTerminalManifest} from "./typewriter-terminal/manifest";
+import {typewriterRetypeManifest} from "./typewriter-retype/manifest";
+import {textScrambleManifest} from "./text-scramble/manifest";
+import {splitFlapManifest} from "./split-flap/manifest";
 // motioner-scaffold:manifest-imports
 
 export type RuntimeDefinition = TemplateDefinition<
@@ -83,6 +107,18 @@ export const runtimeTemplates: ReadonlyArray<RuntimeDefinition> = [
   eraseDefinitionType(defineTemplate({...mediaCarouselManifest, component: MediaCarousel})),
   eraseDefinitionType(defineTemplate({...beforeAfterManifest, component: BeforeAfter})),
   eraseDefinitionType(defineTemplate({...splitScreenManifest, component: SplitScreen})),
+  eraseDefinitionType(defineTemplate({...transitionWipeBlindsManifest, component: TransitionWipeBlinds})),
+  eraseDefinitionType(defineTemplate({...transitionWipeClockManifest, component: TransitionWipeClock})),
+  eraseDefinitionType(defineTemplate({...transitionIrisManifest, component: TransitionIris})),
+  eraseDefinitionType(defineTemplate({...transitionInkManifest, component: TransitionInk})),
+  eraseDefinitionType(defineTemplate({...transitionGlitchManifest, component: TransitionGlitch})),
+  eraseDefinitionType(defineTemplate({...transitionGradientLinearManifest, component: TransitionGradientLinear})),
+  eraseDefinitionType(defineTemplate({...transitionGradientRadialManifest, component: TransitionGradientRadial})),
+  eraseDefinitionType(defineTemplate({...transitionGradientConicManifest, component: TransitionGradientConic})),
+  eraseDefinitionType(defineTemplate({...typewriterTerminalManifest, component: TypewriterTerminal})),
+  eraseDefinitionType(defineTemplate({...typewriterRetypeManifest, component: TypewriterRetype})),
+  eraseDefinitionType(defineTemplate({...textScrambleManifest, component: TextScramble})),
+  eraseDefinitionType(defineTemplate({...splitFlapManifest, component: SplitFlap})),
   // motioner-scaffold:runtime-items
 ];
 
