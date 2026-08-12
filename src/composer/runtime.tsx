@@ -261,6 +261,31 @@ const ComponentContent: React.FC<{node: ComposerNode; unit: number}> = ({node, u
     );
   }
 
+  if (node.componentId === "vintage-filter") {
+    const intensity = asNumber(props.intensity, 70) / 100;
+    return (
+      <div style={{...full, position: "relative", pointerEvents: "none", overflow: "hidden"}}>
+        {/* 泛黄 tint */}
+        <div style={{position: "absolute", inset: 0, background: `rgba(139,107,74,${0.16 * intensity})`, mixBlendMode: "multiply"}} />
+        {/* 纸纹 */}
+        <div style={{position: "absolute", inset: 0, opacity: 0.4 * intensity, background: "linear-gradient(160deg, rgba(255,245,225,0.5) 0%, rgba(230,215,185,0.3) 60%, rgba(210,190,150,0.4) 100%)", mixBlendMode: "soft-light"}} />
+        {/* 颗粒 */}
+        <div style={{position: "absolute", inset: 0, opacity: 0.25 * intensity, backgroundImage: "radial-gradient(rgba(60,50,40,0.55) 0.5px, transparent 0.6px)", backgroundSize: "4px 4px"}} />
+        {/* 印章 */}
+        {asBoolean(props.showStamp, true) && (
+          <div style={{
+            position: "absolute", right: "6%", bottom: "6%", width: 96 * unit, height: 96 * unit,
+            borderRadius: "50%", border: `${3 * unit}px solid rgba(139,107,74,0.65)`, opacity: 0.75,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            transform: "rotate(-12deg)", color: "rgba(139,107,74,0.75)", fontSize: 18 * unit, fontWeight: 800, letterSpacing: 2,
+          }}>
+            {asString(props.stampText, "归档")}
+          </div>
+        )}
+      </div>
+    );
+  }
+
   if (node.componentId === "template") {
     const definition = getRuntimeTemplate(asString(props.templateId, "stat-counter"));
     const Template = definition.component;

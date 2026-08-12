@@ -2,13 +2,13 @@
 
 Motioner 是一款面向 Apple Silicon macOS 与 Windows x64 的本地透明动效生成器。既可以选择模板后填写文字、数据或素材，也可以从组件库自由搭建画面、安排图层时序和动效；最终生成可直接放入剪辑时间线的透明 ProRes 4444、ProRes 4444 XQ 或 PNG 序列，也可生成带深色底的 H.264 审看版。两端共用同一套 React 工作台和项目格式，仅窗口生命周期、快捷键、系统定位文案与离线渲染二进制按平台适配。
 
-当前版本：`1.4.0`。应用、Dock 与安装包已使用 Motioner 正式图标。
+当前版本：`1.5.0`。应用、Dock 与安装包已使用 Motioner 正式图标。
 
 ## 已交付能力
 
 - 46 个生产模板；1.2 新增透明测试卡、路线地图、多折线、堆叠柱、新闻标题、体育比分、画面标注、素材轮播、前后对照和自适应分屏；1.4 新增 24 个内置模板（8 个转场遮罩 + 4 个花式排版 + 12 个数据/资料/字幕/效果，源自 Apache-2.0 的 video-shotcraft）；1.5 新增 10 个图片展示模板（九宫格拼贴、瀑布流、卡片横流、3D 轮播、聚光强调、动态相框、档案堆叠、书封墙、文献卡片、老照片相册）。
 - 双工作流：保留模板快速生成，并新增自由编排画布；模板可一键冻结为可移动、缩放和定时的场景图层。
-- 21 个基础组件：标题、正文、数据数字、矩形、圆形、分隔线、图片、视频、引语、标签、进度条、注释卡、人名条、迷你柱图、列表逐项、卡片堆叠、骨架屏、SVG描边、里程表数字、动效动画和模板场景。
+- 21 个基础组件：标题、正文、数据数字、矩形、圆形、分隔线、图片、视频、引语、标签、进度条、注释卡、人名条、迷你柱图、列表逐项、卡片堆叠、骨架屏、SVG描边、里程表数字、动效动画、老照片滤镜和模板场景。
 - 16 个帧驱动动效预设，覆盖入场、退场与持续动效；可点击阶段按钮勾选，也可拖到时间线素材条的左、中、右区域应用。
 - 内置 7 个自产 Lottie 动效（加载圆环/三点/声波/成功勾选/点赞心形/播放按钮/右向箭头），作为自由编排的“动效动画”组件，可循环播放、随透明视频导出。
 - 自由画布支持拖动、八向缩放、旋转/透明度参数、网格与磁吸、键盘微调；图层时间轴支持移动、修剪、点击寻帧和拖动预览轴。
@@ -70,10 +70,10 @@ pnpm package:win
 输出位置：
 
 - `release/mac-arm64/Motioner.app`
-- `release/Motioner-1.4.0-arm64.dmg`
+- `release/Motioner-1.5.0-arm64.dmg`
 - `release/Motioner-integrity.json`
 - `release/win-unpacked/Motioner.exe`
-- `release/Motioner-1.4.0-x64-windows-installer.exe`
+- `release/Motioner-1.5.0-x64-windows-installer.exe`
 - `release/Motioner-integrity-windows-x64.json`
 
 未签名构建仅供测试和自用。公开分发前，macOS 需要 Developer ID、Hardened Runtime 和 Notarization；Windows 需要代码签名证书，否则可能触发 SmartScreen 安全提示。Windows 开发、打包和实机验收详见 [Windows 双端开发与打包](docs/WINDOWS_DEVELOPMENT.md)。

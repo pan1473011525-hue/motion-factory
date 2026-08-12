@@ -278,6 +278,17 @@ export const composerComponents: ReadonlyArray<ComposerComponentDefinition> = [
     ],
   },
   {
+    id: "vintage-filter", name: "老照片滤镜", category: "layout", description: "怀旧叠加层：泛黄 tint + 纸纹 + 颗粒 + 印章，放在图片上方即可。", preview: "🎞",
+    defaultSize: {width: 1, height: 1},
+    defaultProps: {intensity: 70, stampText: "归档", showStamp: true},
+    schema: z.object({intensity: z.number().min(0).max(100), stampText: z.string().max(12), showStamp: z.boolean()}),
+    fields: [
+      {key: "intensity", label: "怀旧强度", section: "style", control: "number", min: 0, max: 100, step: 1, unit: "%"},
+      {key: "showStamp", label: "显示印章", section: "layout", control: "boolean"},
+      {key: "stampText", label: "印章文字", section: "content", control: "text", maxLength: 12},
+    ],
+  },
+  {
     id: "template", name: "模板场景", category: "layout", description: "将现有模板作为可移动、缩放和定时的图层。", preview: "TPL",
     defaultSize: {width: 1, height: 1},
     defaultProps: {templateId: "stat-counter", templateProps: {}},
