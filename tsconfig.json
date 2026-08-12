@@ -9,6 +9,7 @@
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "types": ["node", "electron-vite/node"],
     "esModuleInterop": true,
+    "resolveJsonModule": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "noUnusedLocals": true

@@ -14,6 +14,9 @@ importers:
       '@remotion/cli':
         specifier: 4.0.507
         version: 4.0.507(postcss@8.5.26)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(supports-color@8.1.1)(typescript@5.9.3)
+      '@remotion/lottie':
+        specifier: 4.0.507
+        version: 4.0.507(lottie-web@5.13.0)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       '@remotion/media':
         specifier: 4.0.507
         version: 4.0.507(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
@@ -802,6 +805,13 @@ packages:
 
   '@remotion/licensing@4.0.507':
     resolution: {integrity: sha512-fdods4YD9c8Ww69wHdnmXpjx7W0rvct6B7gLb92cWsd+ITSUG3hKoh+NqSWXF0GK5bk8IFRmTtBAwJObxow9wA==}
+
+  '@remotion/lottie@4.0.507':
+    resolution: {integrity: sha512-SD54DMO95SCRN5y1HvY6KdIQVQ7GrMV0uXllXrQY/49v3v8Hky5cxwaZNCByLZJrz63uUxdsj7DxTEpx8PWc7A==}
+    peerDependencies:
+      lottie-web: ^5
+      react: '>=16.8.0'
+      react-dom: '>=16.8.0'
 
   '@remotion/media-parser@4.0.507':
     resolution: {integrity: sha512-BONx6R/0LLUSKjSgRLewb9QjZ9ZulxCct/RGPAFN8TIdeFUWxQ81Yfq1hQmUyXNBUhbfcHBEjdGnjgHCAeJkNw==}
@@ -2268,6 +2278,9 @@ packages:
 
   lodash@4.18.1:
     resolution: {integrity: sha512-dMInicTPVE8d1e5otfwmmjlxkZoUpiVLwyeTdUsi/Caj/gfzzblBcCE5sRHV/AsjuCmxWrte2TNGSYuCeCq+0Q==}
+
+  lottie-web@5.13.0:
+    resolution: {integrity: sha512-+gfBXl6sxXMPe8tKQm7qzLnUy5DUPJPKIyRHwtpCpyUEYjHYRJC/5gjUvdkuO2c3JllrPtHXH5UJJK8LRYl5yQ==}
 
   lower-case@2.0.2:
     resolution: {integrity: sha512-7fm3l3NAF9WfN6W3JOmf5drwpVqX78JtoGJ3A6W0a6ZnldM41w2fV5D490psKFTpMds8TJse/eHLFFsNHHjHgg==}
@@ -3858,6 +3871,13 @@ snapshots:
       - typescript
 
   '@remotion/licensing@4.0.507': {}
+
+  '@remotion/lottie@4.0.507(lottie-web@5.13.0)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)':
+    dependencies:
+      lottie-web: 5.13.0
+      react: 19.2.3
+      react-dom: 19.2.3(react@19.2.3)
+      remotion: 4.0.507(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
 
   '@remotion/media-parser@4.0.507': {}
 
@@ -5547,6 +5567,8 @@ snapshots:
   lodash.merge@4.6.2: {}
 
   lodash@4.18.1: {}
+
+  lottie-web@5.13.0: {}
 
   lower-case@2.0.2:
     dependencies:

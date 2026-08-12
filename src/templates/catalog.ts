@@ -26,6 +26,30 @@ import {routeMapManifest} from "./route-map/manifest";
 import {splitScreenManifest} from "./split-screen/manifest";
 import {sportsScoreboardManifest} from "./sports-scoreboard/manifest";
 import {stackedBarsManifest} from "./stacked-bars/manifest";
+import {transitionWipeBlindsManifest} from "./transition-wipe-blinds/manifest";
+import {transitionWipeClockManifest} from "./transition-wipe-clock/manifest";
+import {transitionIrisManifest} from "./transition-iris/manifest";
+import {transitionInkManifest} from "./transition-ink/manifest";
+import {transitionGlitchManifest} from "./transition-glitch/manifest";
+import {transitionGradientLinearManifest} from "./transition-gradient-linear/manifest";
+import {transitionGradientRadialManifest} from "./transition-gradient-radial/manifest";
+import {transitionGradientConicManifest} from "./transition-gradient-conic/manifest";
+import {typewriterTerminalManifest} from "./typewriter-terminal/manifest";
+import {typewriterRetypeManifest} from "./typewriter-retype/manifest";
+import {textScrambleManifest} from "./text-scramble/manifest";
+import {splitFlapManifest} from "./split-flap/manifest";
+import {gaugeReadoutManifest} from "./gauge-readout/manifest";
+import {odometerRollManifest} from "./odometer-roll/manifest";
+import {confettiCelebrateManifest} from "./confetti-celebrate/manifest";
+import {voiceWaveformManifest} from "./voice-waveform/manifest";
+import {listRevealManifest} from "./list-reveal/manifest";
+import {cardStackManifest} from "./card-stack/manifest";
+import {skeletonRevealManifest} from "./skeleton-reveal/manifest";
+import {svgTraceManifest} from "./svg-trace/manifest";
+import {karaokeFillManifest} from "./karaoke-fill/manifest";
+import {grainDissolveManifest} from "./grain-dissolve/manifest";
+import {scanlineAnnotateManifest} from "./scanline-annotate/manifest";
+import {glowFlylineManifest} from "./glow-flyline/manifest";
 // motioner-scaffold:manifest-imports
 
 export type AnyTemplateManifest = TemplateManifest<Record<string, unknown>>;
@@ -57,6 +81,30 @@ export const templateCatalog: ReadonlyArray<AnyTemplateManifest> = [
   eraseManifestType(mediaCarouselManifest),
   eraseManifestType(beforeAfterManifest),
   eraseManifestType(splitScreenManifest),
+  eraseManifestType(transitionWipeBlindsManifest),
+  eraseManifestType(transitionWipeClockManifest),
+  eraseManifestType(transitionIrisManifest),
+  eraseManifestType(transitionInkManifest),
+  eraseManifestType(transitionGlitchManifest),
+  eraseManifestType(transitionGradientLinearManifest),
+  eraseManifestType(transitionGradientRadialManifest),
+  eraseManifestType(transitionGradientConicManifest),
+  eraseManifestType(typewriterTerminalManifest),
+  eraseManifestType(typewriterRetypeManifest),
+  eraseManifestType(textScrambleManifest),
+  eraseManifestType(splitFlapManifest),
+  eraseManifestType(gaugeReadoutManifest),
+  eraseManifestType(odometerRollManifest),
+  eraseManifestType(confettiCelebrateManifest),
+  eraseManifestType(voiceWaveformManifest),
+  eraseManifestType(listRevealManifest),
+  eraseManifestType(cardStackManifest),
+  eraseManifestType(skeletonRevealManifest),
+  eraseManifestType(svgTraceManifest),
+  eraseManifestType(karaokeFillManifest),
+  eraseManifestType(grainDissolveManifest),
+  eraseManifestType(scanlineAnnotateManifest),
+  eraseManifestType(glowFlylineManifest),
   // motioner-scaffold:catalog-items
 ];
 

@@ -1,6 +1,7 @@
 import type {CSSProperties, ReactNode} from "react";
 import {
   AbsoluteFill,
+  Easing,
   Sequence,
   interpolate,
   useCurrentFrame,
@@ -14,6 +15,8 @@ import type {
 import {getComposerComponent} from "./registry";
 import {getComposerEasingFunction} from "./easing";
 import {getRuntimeTemplate} from "../templates/definitions";
+import {lottieAssets} from "./lottie-assets";
+import {Lottie} from "@remotion/lottie";
 import {
   MediaSlot,
   useMotionSettings,
@@ -145,6 +148,117 @@ const ComponentContent: React.FC<{node: ComposerNode; unit: number}> = ({node, u
     const maximum = Math.max(1, ...values);
     const progress = motion.reducedMotion ? 1 : interpolate(frame, [0, Math.max(1, Math.round(fps * 1.1))], [0, 1], {extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: contentEasing});
     return <div style={{...full, display: "flex", flexDirection: "column", color: asString(props.textColor), fontFamily}}><strong style={{fontSize: 32 * unit}}>{asString(props.title)}</strong><div style={{display: "flex", flex: 1, alignItems: "flex-end", gap: 18 * unit, paddingTop: 24 * unit}}>{labels.map((label, index) => {const value = values[index] ?? 0; return <div key={`${label}-${index}`} style={{display: "flex", flex: 1, minWidth: 0, height: "100%", flexDirection: "column", justifyContent: "flex-end", alignItems: "center"}}>{asBoolean(props.showValues, true) && <span style={{fontSize: 20 * unit, fontVariantNumeric: "tabular-nums"}}>{value}</span>}<div style={{width: "70%", height: `${Math.max(2, value / maximum * progress * 80)}%`, marginTop: 8 * unit, borderRadius: `${9 * unit}px ${9 * unit}px 0 0`, background: asString(props.accentColor)}} /><span style={{width: "100%", marginTop: 10 * unit, overflow: "hidden", textAlign: "center", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "rgba(244,247,251,0.68)", fontSize: 18 * unit}}>{label}</span></div>;})}</div></div>;
+  }
+
+  if (node.componentId === "list-reveal") {
+    const items = asString(props.items).split(",").map((value) => value.trim()).filter(Boolean).slice(0, 12);
+    const fontSize = asNumber(props.fontSize, 24) * unit;
+    return <div style={{...full, display: "flex", alignItems: "center", justifyContent: "center", fontFamily}}>
+      <div style={{width: "100%", height: "100%", display: "flex", flexDirection: "column", justifyContent: "center", gap: fontSize * 0.5}}>
+        {items.map((label, index) => {
+          const start = Math.round(index * fps * 0.12);
+          const progress = motion.reducedMotion ? 1 : interpolate(frame, [start, start + Math.max(1, Math.round(fps * 0.3))], [0, 1], {extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: contentEasing});
+          const p = Easing.out(Easing.back(1.2))(progress);
+          return <div key={`${label}-${index}`} style={{display: "flex", alignItems: "center", gap: fontSize * 0.6, opacity: Math.min(1, progress * 2), transform: `scale(${0.7 + p * 0.3}) translateY(${(1 - progress) * fontSize}px)`}}>
+            <div style={{width: fontSize * 0.8, height: fontSize * 0.8, borderRadius: fontSize * 0.25, flex: "none", background: asString(props.accentColor, "#47A7FF")}} />
+            <span style={{fontSize, fontWeight: 500, color: asString(props.textColor, "#F4F7FB"), whiteSpace: "nowrap"}}>{label}</span>
+          </div>;
+        })}
+      </div>
+    </div>;
+  }
+
+  if (node.componentId === "card-stack") {
+    const count = Math.max(4, Math.min(12, asNumber(props.count, 8)));
+    const cardW = 110 * unit;
+    const cardH = 150 * unit;
+    return <div style={{...full, position: "relative", perspective: 900}}>
+      {Array.from({length: count}).map((_, index) => {
+        const k = index - (count - 1) / 2;
+        const fan = motion.reducedMotion ? 1 : interpolate(frame, [Math.max(0, Math.round(fps * 0.5)), Math.round(fps * 1.4)], [0, 1], {extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: contentEasing});
+        const inStart = Math.round(index * fps * 0.08);
+        const inProgress = motion.reducedMotion ? 1 : interpolate(frame, [inStart, inStart + Math.round(fps * 0.35)], [0, 1], {extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.out(Easing.cubic)});
+        const rot = k * 8 * fan;
+        const tx = k * 34 * fan;
+        return <div key={index} style={{position: "absolute", left: "50%", top: "50%", width: cardW, height: cardH, margin: `${-cardH / 2}px 0 0 ${-cardW / 2}px`, borderRadius: 12 * unit, background: asString(props.accentColor, "#47A7FF"), opacity: Math.min(1, inProgress * 2), transform: `translate3d(${tx}px,${(1 - inProgress) * 90}px,0) rotate(${rot}deg)`, boxShadow: "0 12px 34px rgba(0,0,0,0.5)", zIndex: 20 - Math.abs(k * 2)}} />;
+      })}
+    </div>;
+  }
+
+  if (node.componentId === "skeleton-reveal") {
+    const lines = asString(props.lines).split(",").map((value) => value.trim()).filter(Boolean).slice(0, 6);
+    return <div style={{...full, display: "flex", flexDirection: "column", justifyContent: "center", gap: 18 * unit, fontFamily}}>
+      <div style={{display: "flex", gap: 18 * unit, alignItems: "center"}}>
+        <div style={{width: 56 * unit, height: 56 * unit, borderRadius: 14 * unit, background: asString(props.accentColor, "#47A7FF"), opacity: 0.85}} />
+        <div style={{height: 22 * unit, width: "55%", borderRadius: 11 * unit, background: "rgba(255,255,255,0.28)"}} />
+      </div>
+      {lines.map((line, index) => {
+        const progress = motion.reducedMotion ? 1 : interpolate(frame, [Math.round(fps * (0.4 + index * 0.2)), Math.round(fps * (0.7 + index * 0.2))], [0, 1], {extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: contentEasing});
+        return <div key={`${line}-${index}`} style={{opacity: progress, transform: `translateY(${(1 - progress) * 12 * unit}px)`}}>
+          {progress < 0.85
+            ? <div style={{height: 20 * unit, width: `${88 - index * 12}%`, borderRadius: 10 * unit, background: "rgba(255,255,255,0.2)"}} />
+            : <span style={{fontSize: 24 * unit, color: asString(props.textColor, "#F4F7FB")}}>{line}</span>}
+        </div>;
+      })}
+    </div>;
+  }
+
+  if (node.componentId === "svg-trace") {
+    const trace = motion.reducedMotion ? 1 : interpolate(frame, [0, Math.max(1, Math.round(fps * 0.9))], [0, 1], {extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.inOut(Easing.cubic)});
+    const contentOp = motion.reducedMotion ? 1 : interpolate(frame, [Math.round(fps * 0.9), Math.round(fps * 1.1)], [0, 1], {extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.out(Easing.quad)});
+    const titleSize = asNumber(props.fontSize, 30) * unit;
+    return <div style={{...full, position: "relative", fontFamily}}>
+      <svg viewBox="0 0 100 100" preserveAspectRatio="none" style={{position: "absolute", inset: 0, overflow: "visible"}}>
+        <rect x={1.5} y={1.5} width={97} height={97} rx={3} fill="none" stroke={asString(props.accentColor, "#F7F9FB")} strokeWidth={0.6} pathLength={1} strokeDasharray="1" strokeDashoffset={1 - trace} strokeLinecap="round" />
+      </svg>
+      <div style={{position: "absolute", inset: `${7 * unit}px`, display: "flex", flexDirection: "column", justifyContent: "center", opacity: contentOp, padding: `0 ${10 * unit}px`}}>
+        <div style={{fontSize: titleSize, fontWeight: 800, color: asString(props.textColor, "#F4F7FB"), lineHeight: 1.15}}>{asString(props.title)}</div>
+        <div style={{marginTop: 12 * unit, fontSize: titleSize * 0.55, color: "rgba(244,247,251,0.7)", lineHeight: 1.35}}>{asString(props.subtitle)}</div>
+      </div>
+    </div>;
+  }
+
+  if (node.componentId === "odometer-roll") {
+    const fontSize = 88 * unit;
+    const ROW = fontSize * 1.08;
+    const DW = fontSize * 0.68;
+    const ink = asString(props.color, "#F4F7FB");
+    const value = asNumber(props.value, 0);
+    const intDigits = String(Math.floor(value)).split("").map(Number);
+    const posAt = (f: number, d: number, s: number): number => {
+      const p0 = 0.85 * s;
+      const T = Math.ceil((p0 + 6 - d) / 10) * 10 + d;
+      if (f < s) return 0.85 * Math.max(f, 0);
+      if (f < s + 16) return interpolate(f, [s, s + 16], [p0, T + 0.5], {extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.out(Easing.cubic)});
+      if (f < s + 22) return interpolate(f, [s + 16, s + 22], [T + 0.5, T], {extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.out(Easing.cubic)});
+      return T;
+    };
+    const reel = (digit: number, index: number) => {
+      const s = Math.round(fps * (20 + index * 7) / 30);
+      const pos = posAt(frame, digit, s);
+      return <div style={{position: "relative", width: DW, height: ROW, overflow: "hidden"}}>
+        <div style={{position: "absolute", left: 0, top: 0, width: DW, transform: `translateY(${-(pos % 10) * ROW}px)`}}>
+          {Array.from({length: 20}).map((_, k) => <div key={k} style={{width: DW, height: ROW, lineHeight: `${ROW}px`, textAlign: "center", fontSize, fontWeight: 800, fontVariantNumeric: "tabular-nums", color: ink}}>{k % 10}</div>)}
+        </div>
+      </div>;
+    };
+    const glyph = (ch: string) => <div style={{width: DW, height: ROW, lineHeight: `${ROW}px`, textAlign: "center", fontSize, fontWeight: 800, fontVariantNumeric: "tabular-nums", color: ink}}>{ch}</div>;
+    const totalW = (intDigits.length + asString(props.suffix).length) * DW;
+    return <div style={{...full, display: "flex", alignItems: "center", justifyContent: "center", fontFamily}}>
+      <div style={{display: "flex", width: totalW}}>
+        {intDigits.map((d, i) => <div key={i} style={{flex: 1}}>{reel(d, i)}</div>)}
+        {asString(props.suffix).split("").map((ch, i) => <div key={`s${i}`} style={{flex: 1}}>{glyph(ch)}</div>)}
+      </div>
+    </div>;
+  }
+
+  if (node.componentId === "lottie") {
+    const asset = lottieAssets.find((candidate) => candidate.id === asString(props.assetId)) ?? lottieAssets[0];
+    return (
+      <div style={{...full, display: "flex", alignItems: "center", justifyContent: "center"}}>
+        <Lottie animationData={asset.data} loop={asBoolean(props.loop, true)} style={{width: "100%", height: "100%"}} />
+      </div>
+    );
   }
 
   if (node.componentId === "template") {
