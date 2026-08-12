@@ -10,3 +10,6 @@ out
 output
 release
 vendor/chrome-headless-shell
+vendor/chrome-headless-shell-win32-x64
+vendor/remotion-compositor-win32-x64-msvc
+vendor/.runtime-cache

@@ -19,6 +19,7 @@ import type {
 } from "../shared/contracts";
 import {getExportPreset, type ExportPresetId} from "../shared/export-presets";
 import {buildLottieExport} from "../shared/lottie-export";
+import {getRuntimeBinaryPath} from "./runtime-platform";
 import {
   buildSectionRanges,
   buildSectionsDocument,
@@ -175,9 +176,9 @@ const validateVideoOutput = async (
   if (!directory) {
     throw new Error("未找到内置 FFprobe，无法验证导出文件");
   }
-  const ffprobe = join(directory, "ffprobe");
-  const ffmpeg = join(directory, "ffmpeg");
-  if (!existsSync(ffprobe) || !existsSync(ffmpeg)) {
+  const ffprobe = getRuntimeBinaryPath(directory, "ffprobe");
+  const ffmpeg = getRuntimeBinaryPath(directory, "ffmpeg");
+  if (!ffprobe || !ffmpeg || !existsSync(ffprobe) || !existsSync(ffmpeg)) {
     throw new Error("内置媒体校验工具不完整");
   }
 
@@ -292,7 +293,8 @@ const ensureRec709Metadata = async (
   onChild: (child: ChildProcessWithoutNullStreams | null) => void,
 ): Promise<void> => {
   if (!message.binariesDirectory) throw new Error("未找到内置 FFmpeg，无法写入 Rec.709 元数据");
-  const ffmpeg = join(message.binariesDirectory, "ffmpeg");
+  const ffmpeg = getRuntimeBinaryPath(message.binariesDirectory, "ffmpeg");
+  if (!ffmpeg) throw new Error("当前平台没有可用的内置 FFmpeg");
   const sourcePath = `${message.outputLocation}.untagged`;
   await rename(message.outputLocation, sourcePath);
   try {

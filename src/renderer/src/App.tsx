@@ -81,7 +81,7 @@ import {Select} from "./Select";
 import {CloseProjectDialog} from "./CloseProjectDialog";
 import {GlobalTooltip} from "./GlobalTooltip";
 import {getTemplateSelectionAction} from "./template-selection";
-import {findShortcutCommand, isEditableShortcutTarget, mergeShortcutBindings, type ShortcutBindingMap, type ShortcutCommandId} from "./shortcuts";
+import {findShortcutCommand, getDefaultShortcutBindings, isEditableShortcutTarget, mergeShortcutBindings, type ShortcutBindingMap, type ShortcutCommandId} from "./shortcuts";
 import motionerIcon from "./assets/motioner-icon.png";
 
 type SaveState = "idle" | "dirty" | "saving" | "saved" | "recovery" | "error";
@@ -123,6 +123,7 @@ const DurationInput: React.FC<{
 }> = ({seconds, frames, onCommit}) => <CompactPropertyRow label="目标时长（秒）" help={`实际 ${seconds.toFixed(4)} 秒 · ${frames} 帧`}><RangeNumberControl ariaLabel="目标时长" value={Number(seconds.toFixed(3))} min={0.1} max={7200} sliderMax={Math.max(60, Math.ceil(seconds))} step={0.1} resetValue={5} onChange={onCommit} /></CompactPropertyRow>;
 
 export const App: React.FC = () => {
+  const desktopPlatform = window.motioner?.platform ?? "darwin";
   const [project, setProject] = useState<MotionProject>(makeInitialProject);
   const [undoStack, setUndoStack] = useState<MotionProject[]>([]);
   const [redoStack, setRedoStack] = useState<MotionProject[]>([]);
@@ -157,7 +158,10 @@ export const App: React.FC = () => {
   const [templateInspectorView, setTemplateInspectorView] = useState<TemplateInspectorView>("edit");
   const [composerInspectorView, setComposerInspectorView] = useState<ComposerInspectorView>("basic");
   const [shortcutSettingsOpen, setShortcutSettingsOpen] = useState(false);
-  const [shortcutBindings, setShortcutBindings] = useState<ShortcutBindingMap>(() => mergeShortcutBindings(loadStorage("motioner.shortcuts", {})));
+  const [shortcutBindings, setShortcutBindings] = useState<ShortcutBindingMap>(() => mergeShortcutBindings(
+    loadStorage("motioner.shortcuts", {}),
+    getDefaultShortcutBindings(desktopPlatform),
+  ));
   const revisionRef = useRef(0);
   const playerRef = useRef<PlayerRef>(null);
   const scrubWasPlayingRef = useRef(false);
@@ -1002,7 +1006,7 @@ export const App: React.FC = () => {
   const previewProps = parsedProps.success ? parsedProps.data : manifest.defaultProps;
 
   return (
-    <div className="app-shell">
+    <div className="app-shell" data-platform={desktopPlatform}>
       <header className="toolbar">
         <div className="window-spacer" aria-hidden="true" />
         <div className="brand-block">
@@ -1023,7 +1027,7 @@ export const App: React.FC = () => {
         </div>
         <div className="shortcut-settings-anchor">
           <button type="button" className={`icon-btn toolbar-shortcut-button ${shortcutSettingsOpen ? "active" : ""}`} onClick={() => setShortcutSettingsOpen((open) => !open)} title="键盘快捷键设置" aria-label="键盘快捷键设置" aria-expanded={shortcutSettingsOpen}><Keyboard /></button>
-          <ShortcutSettings open={shortcutSettingsOpen} bindings={shortcutBindings} onClose={() => setShortcutSettingsOpen(false)} onChange={setShortcutBindings} />
+          <ShortcutSettings open={shortcutSettingsOpen} bindings={shortcutBindings} platform={desktopPlatform} onClose={() => setShortcutSettingsOpen(false)} onChange={setShortcutBindings} />
         </div>
         <div className="project-identity">
           {renamingProject ? <input

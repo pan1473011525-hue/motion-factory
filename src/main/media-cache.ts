@@ -4,6 +4,7 @@ import {mkdir} from "node:fs/promises";
 import {extname, join} from "node:path";
 import type {ProjectAsset} from "../../packages/project-model/src";
 import {fingerprintFile} from "./asset-fingerprint";
+import {getRuntimeBinaryPath} from "./runtime-platform";
 
 const run = async (executable: string, args: string[]): Promise<string> => new Promise((resolve, reject) => {
   const child = spawn(executable, args, {stdio: ["ignore", "pipe", "pipe"]});
@@ -27,9 +28,9 @@ export const prepareMediaCache = async (
   const fingerprint = await fingerprintFile(asset.path);
   const base = fingerprint.slice(0, 24);
   if (!binariesDirectory || asset.kind === "font") return {...asset, fingerprint};
-  const ffmpeg = join(binariesDirectory, "ffmpeg");
-  const ffprobe = join(binariesDirectory, "ffprobe");
-  if (!existsSync(ffmpeg) || !existsSync(ffprobe)) return {...asset, fingerprint};
+  const ffmpeg = getRuntimeBinaryPath(binariesDirectory, "ffmpeg");
+  const ffprobe = getRuntimeBinaryPath(binariesDirectory, "ffprobe");
+  if (!ffmpeg || !ffprobe || !existsSync(ffmpeg) || !existsSync(ffprobe)) return {...asset, fingerprint};
   const thumbnails = join(cacheRoot, "thumbnails");
   const proxies = join(cacheRoot, "proxies");
   await Promise.all([mkdir(thumbnails, {recursive: true}), mkdir(proxies, {recursive: true})]);

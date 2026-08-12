@@ -2,7 +2,7 @@
 
 ## 1. 设计原则
 
-Motioner 以“同组件预览与导出、帧决定画面、Schema 驱动编辑、输出经过验证才落盘”为核心。应用仅面向 Apple Silicon macOS，完全本地运行。模板模式与 Composer 模式最终都进入同一个 Remotion Composition。
+Motioner 以“同组件预览与导出、帧决定画面、Schema 驱动编辑、输出经过验证才落盘”为核心。应用面向 Apple Silicon macOS 与 Windows x64，完全本地运行。模板模式与 Composer 模式最终都进入同一个 Remotion Composition，两端共用同一套 UI、项目模型与渲染合同。
 
 ## 2. 进程与信任边界
 
@@ -135,13 +135,14 @@ Worker 为每个任务创建唯一隐藏临时路径：视频为临时文件，P
 
 ## 8. 离线打包
 
-electron-builder 生成 arm64 `.app` 和 DMG。包内额外资源包括：
+electron-builder 生成 macOS arm64 `.app` / DMG 与 Windows x64 NSIS 安装包。包内额外资源包括：
 
 - 预构建的 `dist/remotion/index.html`。
-- `chrome-headless-shell`。
-- Remotion arm64 compositor、FFmpeg 和 FFprobe（asar unpack）。
+- 与目标平台一致的 `chrome-headless-shell`。
+- macOS 的 Remotion arm64 compositor、FFmpeg 和 FFprobe（asar unpack）。
+- Windows 的 Remotion x64 compositor、FFmpeg 和 FFprobe（独立 `remotion-binaries` 资源目录）。
 
-`scripts/verify-package.mjs` 对应用可执行文件、正式图标、离线浏览器、Remotion bundle 与渲染二进制检查存在性、权限、非空大小并计算 SHA-256，写出 `release/Motioner-integrity.json`。当前包未签名和公证，仅用于拥有者本机；要公开分发，需另加 Developer ID、Hardened Runtime、Entitlements、Notarization 与更新签名。
+`scripts/verify-package.mjs` 对应用可执行文件、正式图标、离线浏览器、Remotion bundle 与渲染二进制检查存在性、权限、非空大小并计算 SHA-256；Windows `.exe` 还会校验 `MZ` PE 文件头。报告分别写入 `release/Motioner-integrity.json` 与 `release/Motioner-integrity-windows-x64.json`。当前包未签名和公证；公开分发需分别配置 Apple 公证与 Windows Authenticode 签名。
 
 ## 9. 扩展边界
 
